@@ -9,7 +9,8 @@ import {
   Settings,
   Plus,
   Flame,
-  Volume2,
+  Sun,
+  Moon,
   Sparkles,
   School
 } from 'lucide-react';
@@ -245,10 +246,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={onToggleTheme}
           className="btn-ghost"
-          style={{ padding: '6px 8px', fontSize: '0.82rem' }}
-          title="Toggle Theme"
+          style={{ padding: '6px 8px', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+          title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
         >
-          <Volume2 size={16} /> {theme === 'dark' ? 'Dark' : 'Light'}
+          {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          {theme === 'dark' ? 'Light' : 'Dark'}
         </button>
       </div>
     </aside>
