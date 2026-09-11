@@ -20,6 +20,7 @@ import confetti from 'canvas-confetti';
 import { generateTopicQuiz, QuizQuestion } from '../services/topicGenerator';
 import { generateQuizPDF } from '../services/pdfService';
 import { speechService } from '../services/speechService';
+import { aiClient } from '../services/aiClient';
 
 interface QuizModalProps {
   isOpen: boolean;
@@ -46,6 +47,8 @@ export const QuizModal: React.FC<QuizModalProps> = ({
   const [score, setScore] = useState<number>(0);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
+  const [isGeneratingAI, setIsGeneratingAI] = useState<boolean>(false);
+  const [isAiGenerated, setIsAiGenerated] = useState<boolean>(false);
 
   // Timer States (Default: 60 seconds per question)
   const [isTimerActive, setIsTimerActive] = useState<boolean>(true);
@@ -67,6 +70,8 @@ export const QuizModal: React.FC<QuizModalProps> = ({
   const onQuizCompletedRef = useRef(onQuizCompleted);
   const wasHiddenRef = useRef(false);
   const lastViolationTimeRef = useRef<number>(0);
+  const hasSubmittedRef = useRef(hasSubmitted);
+  const currentIndexRef = useRef(currentIndex);
 
   useEffect(() => {
     isOpenRef.current = isOpen;
@@ -75,6 +80,8 @@ export const QuizModal: React.FC<QuizModalProps> = ({
     strikesRef.current = strikes;
     scoreRef.current = score;
     onQuizCompletedRef.current = onQuizCompleted;
+    hasSubmittedRef.current = hasSubmitted;
+    currentIndexRef.current = currentIndex;
   });
 
   // Reset quiz state, strikes, and timer on topic, count, or open change
@@ -95,6 +102,31 @@ export const QuizModal: React.FC<QuizModalProps> = ({
       setSecondsRemaining(totalSecs);
       setIsTimerPaused(false);
       wasHiddenRef.current = false;
+      setIsAiGenerated(false);
+
+      // If an active AI API key is configured, dynamically generate tailored questions for this exact topic
+      if (aiClient.hasApiKey()) {
+        setIsGeneratingAI(true);
+        aiClient
+          .generateQuizQuestions(topic, questionCount)
+          .then(aiQs => {
+            if (
+              aiQs &&
+              aiQs.length >= Math.min(questionCount, 5) &&
+              !hasSubmittedRef.current &&
+              currentIndexRef.current === 0
+            ) {
+              setQuestions(aiQs);
+              setIsAiGenerated(true);
+            }
+          })
+          .catch(err => {
+            console.warn('AI Quiz Generation fallback active:', err);
+          })
+          .finally(() => {
+            setIsGeneratingAI(false);
+          });
+      }
     }
   }, [topic, isOpen, questionCount]);
 
@@ -332,6 +364,54 @@ export const QuizModal: React.FC<QuizModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {/* AI Generated / Curated Indicator Pill */}
+            {!isCompleted && (
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '4px 10px',
+                  borderRadius: 'var(--radius-full)',
+                  background: isAiGenerated
+                    ? 'rgba(99, 102, 241, 0.2)'
+                    : isGeneratingAI
+                    ? 'rgba(245, 158, 11, 0.15)'
+                    : 'rgba(255, 255, 255, 0.05)',
+                  border: `1px solid ${
+                    isAiGenerated
+                      ? 'rgba(99, 102, 241, 0.4)'
+                      : isGeneratingAI
+                      ? 'rgba(245, 158, 11, 0.4)'
+                      : 'var(--border-subtle)'
+                  }`,
+                  color: isAiGenerated
+                    ? '#c7d2fe'
+                    : isGeneratingAI
+                    ? 'var(--developing)'
+                    : 'var(--text-secondary)',
+                  fontSize: '0.74rem',
+                  fontWeight: 600
+                }}
+                title={
+                  isAiGenerated
+                    ? `AI dynamically customized questions specifically for: ${topic}`
+                    : isGeneratingAI
+                    ? 'AI is dynamically tailoring questions for this topic...'
+                    : `Subject curriculum questions for: ${topic}`
+                }
+              >
+                <Sparkles size={12} className={isGeneratingAI ? 'animate-spin' : ''} color={isAiGenerated ? 'var(--primary-light)' : 'inherit'} />
+                <span>
+                  {isGeneratingAI
+                    ? 'AI Tailoring...'
+                    : isAiGenerated
+                    ? 'AI Customized'
+                    : 'Curated Deck'}
+                </span>
+              </div>
+            )}
+
             {/* Tab-Switch Anti-Cheat Badge */}
             {!isCompleted && (
               <div

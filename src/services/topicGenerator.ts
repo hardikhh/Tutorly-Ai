@@ -14,28 +14,58 @@ export interface Flashcard {
   category: string;
 }
 
+// Helper detection functions with word boundaries to avoid false positives (e.g. matching 'c' in 'calculus')
+export function isCProgramming(t: string): boolean {
+  return (
+    /\b(c\s+prog|c\s+lang|c\s+syntax|c\s+loops?|c\s+pointers?|stdio\.h)\b/i.test(t) ||
+    t === 'c' ||
+    t === 'c programming' ||
+    t === 'c language' ||
+    t === 'c loops & syntax' ||
+    t === 'c programming & loops'
+  );
+}
+
+export function isPython(t: string): boolean {
+  return /\b(python|py|django|flask|pandas|numpy|list comprehension)\b/i.test(t);
+}
+
+export function isJava(t: string): boolean {
+  return /\b(java|jvm|spring|oop|object oriented|polymorphism|inheritance)\b/i.test(t) && !/javascript/i.test(t);
+}
+
+export function isBiology(t: string): boolean {
+  return /\b(bio|biology|photosynthesis|cell|cells|plant|plants|chloroplast|mitochondria|respiration|dna|rna|gene|genetics|enzyme|ecology)\b/i.test(t);
+}
+
+export function isMathematics(t: string): boolean {
+  return /\b(math|mathematics|algebra|calculus|derivative|integral|equation|equations|fraction|fractions|quadratic|geometry|trig|trigonometry|pemdas|matrix)\b/i.test(t);
+}
+
+export function isPhysics(t: string): boolean {
+  return /\b(physic|physics|newton|newtonian|force|forces|gravity|velocity|acceleration|momentum|kinetic|potential|thermodynamics?|optics|friction|inertia|wave|electromagnetism)\b/i.test(t);
+}
+
+export function isChemistry(t: string): boolean {
+  return /\b(chem|chemistry|chemical|periodic|element|atom|atomic|molecule|reaction|reactions|acid|base|bonding|stoichiometry|ion|covalent|organic chem)\b/i.test(t);
+}
+
+export function isHistory(t: string): boolean {
+  return /\b(history|historical|revolution|french revolution|war|ww1|ww2|world war|empire|treaty|monarchy|renaissance|democracy|civil war|medieval|dynasty)\b/i.test(t);
+}
+
 export function generateTopicQuiz(
   topic: string,
   questionCount: number = 15,
   tiered: boolean = true
 ): QuizQuestion[] {
-  const t = topic.toLowerCase();
+  const t = topic.trim().toLowerCase();
   let pool: QuizQuestion[] = [];
 
-  // ==========================================
-  // 1. CODING, C PROGRAMMING & LOOPS
-  // ==========================================
-  if (
-    t.includes('c') ||
-    t.includes('loop') ||
-    t.includes('code') ||
-    t.includes('program') ||
-    t.includes('python') ||
-    t.includes('java') ||
-    t.includes('function')
-  ) {
+  // 1. CODING: C PROGRAMMING & LOOPS
+  if (isCProgramming(t)) {
     pool = [
-      // 5 Low Level (Foundations)
+      // 5 Low
       {
         id: 'c_low_1',
         difficulty: 'Low',
@@ -48,12 +78,7 @@ export function generateTopicQuiz(
         id: 'c_low_2',
         difficulty: 'Low',
         prompt: 'To print numbers from 1 to 5 using a for loop in C, which loop header is correct?',
-        options: [
-          'for (int i = 1; i <= 5; i++)',
-          'for (int i = 0; i < 5; i--)',
-          'for (i = 1 to 5)',
-          'loop (1 <= 5)'
-        ],
+        options: ['for (int i = 1; i <= 5; i++)', 'for (int i = 0; i < 5; i--)', 'for (i = 1 to 5)', 'loop (1 <= 5)'],
         correctIndex: 0,
         explanation: 'for (int i = 1; i <= 5; i++) initializes at 1, checks if i <= 5, and increments i by 1 each cycle.'
       },
@@ -86,8 +111,7 @@ export function generateTopicQuiz(
         correctIndex: 1,
         explanation: 'A return code of 0 informs the operating system that the process terminated successfully.'
       },
-
-      // 5 Medium Level (Application & Code Tracing)
+      // 5 Med
       {
         id: 'c_med_1',
         difficulty: 'Medium',
@@ -99,52 +123,46 @@ export function generateTopicQuiz(
       {
         id: 'c_med_2',
         difficulty: 'Medium',
-        prompt: 'What happens if you write a for loop with empty condition: for (int i = 0; ; i++) in C?',
+        prompt: 'What is the purpose of the "break" statement inside a loop in C?',
         options: [
-          'Compile-time syntax error',
-          'The loop never runs',
-          'It creates an infinite loop unless terminated with break',
-          'The loop runs only once'
+          'Skip the current iteration and proceed to next',
+          'Immediately terminate and exit the innermost loop',
+          'Restart the loop from 0',
+          'Pause the computer clock'
         ],
-        correctIndex: 2,
-        explanation: 'In C, an omitted condition in a for loop defaults to true, causing an infinite loop.'
+        correctIndex: 1,
+        explanation: '"break" terminates the loop immediately, jumping execution to the first statement after the loop.'
       },
       {
         id: 'c_med_3',
         difficulty: 'Medium',
-        prompt: 'What is the key difference between "break" and "continue" statements inside a loop?',
+        prompt: 'What does "continue" do inside a while loop?',
         options: [
-          '"break" skips the current iteration; "continue" terminates the whole loop',
-          '"break" terminates the loop immediately; "continue" skips to the next iteration',
-          'Both statements perform the exact same action',
-          '"continue" restarts the entire program from main()'
+          'Terminates the program',
+          'Skips the rest of the current iteration and jumps to the loop condition test',
+          'Increments variables by 2',
+          'Prints the current variable'
         ],
         correctIndex: 1,
-        explanation: '"break" exits the loop immediately, whereas "continue" skips remaining statements in the current iteration and jumps to the update step.'
+        explanation: '"continue" skips remaining statements in the current iteration and triggers the next condition check.'
       },
       {
         id: 'c_med_4',
         difficulty: 'Medium',
-        prompt: 'What will be printed by: int x = 5; printf("%d", x++); ?',
-        options: ['6', '5', '4', 'Undefined behavior'],
+        prompt: 'What happens if a loop condition is never false, e.g., while (1) { ... } without a break?',
+        options: ['Segmentation fault', 'An infinite loop', 'Compiler error', 'Automatic restart'],
         correctIndex: 1,
-        explanation: 'Post-increment x++ returns the current value (5) first before incrementing x to 6.'
+        explanation: 'When the loop condition always evaluates to non-zero (true), an infinite loop occurs.'
       },
       {
         id: 'c_med_5',
         difficulty: 'Medium',
-        prompt: 'Which while loop is functionally equivalent to: for (int i = 1; i <= 5; i++) { printf("%d", i); } ?',
-        options: [
-          'int i = 1; while (i <= 5) { printf("%d", i); i++; }',
-          'while (int i = 1; i <= 5) { printf("%d", i); }',
-          'int i = 5; while (i >= 1) { printf("%d", i); }',
-          'int i = 1; while (i < 5) { i++; printf("%d", i); }'
-        ],
-        correctIndex: 0,
-        explanation: 'Initializing before while, checking i <= 5, printing i, and incrementing i++ matches the for loop behavior.'
+        prompt: 'What is the value of i after exiting: int i; for (i = 0; i < 4; i++) { } ?',
+        options: ['3', '4', '5', '0'],
+        correctIndex: 1,
+        explanation: 'The loop increments i to 4. Since 4 < 4 is false, the loop exits with i equal to 4.'
       },
-
-      // 5 Hard Level (Complex Tracing, Memory & Edge Cases)
+      // 5 Hard
       {
         id: 'c_hard_1',
         difficulty: 'Hard',
@@ -203,19 +221,169 @@ export function generateTopicQuiz(
     ];
   }
 
-  // ==========================================
-  // 2. SCIENCE, BIOLOGY & PHOTOSYNTHESIS
-  // ==========================================
-  else if (
-    t.includes('photosynthesis') ||
-    t.includes('bio') ||
-    t.includes('cell') ||
-    t.includes('plant') ||
-    t.includes('mitochondria') ||
-    t.includes('respiration')
-  ) {
+  // 2. PYTHON PROGRAMMING
+  else if (isPython(t)) {
     pool = [
-      // 5 Low Level
+      // 5 Low
+      {
+        id: 'py_low_1',
+        difficulty: 'Low',
+        prompt: 'Which keyword is used to define a function in Python?',
+        options: ['func', 'def', 'function', 'define'],
+        correctIndex: 1,
+        explanation: 'In Python, functions are defined using the "def" keyword followed by the function name.'
+      },
+      {
+        id: 'py_low_2',
+        difficulty: 'Low',
+        prompt: 'What data structure in Python is ordered, mutable, and written with square brackets []?',
+        options: ['Tuple', 'Dictionary', 'List', 'Set'],
+        correctIndex: 2,
+        explanation: 'Lists are mutable sequences defined using square brackets: [1, 2, 3].'
+      },
+      {
+        id: 'py_low_3',
+        difficulty: 'Low',
+        prompt: 'What is the output of len("Tutorly") in Python?',
+        options: ['6', '7', '8', 'None'],
+        correctIndex: 1,
+        explanation: '"Tutorly" has 7 characters, so len() returns 7.'
+      },
+      {
+        id: 'py_low_4',
+        difficulty: 'Low',
+        prompt: 'How are code blocks defined in Python instead of curly braces {}?',
+        options: ['Semicolons', 'Indentation (whitespace)', 'Parentheses', 'Tags'],
+        correctIndex: 1,
+        explanation: 'Python uses indentation (standard 4 spaces) to delimit code blocks and scope.'
+      },
+      {
+        id: 'py_low_5',
+        difficulty: 'Low',
+        prompt: 'What function is used to take user text input from the console in Python 3?',
+        options: ['scanf()', 'read()', 'input()', 'cin >>'],
+        correctIndex: 2,
+        explanation: 'input() pauses execution and reads a string from user console input.'
+      },
+      // 5 Med
+      {
+        id: 'py_med_1',
+        difficulty: 'Medium',
+        prompt: 'What does the list comprehension [x**2 for x in range(4)] produce?',
+        options: ['[0, 1, 4, 9]', '[1, 4, 9, 16]', '[0, 2, 4, 6]', '[1, 2, 3, 4]'],
+        correctIndex: 0,
+        explanation: 'range(4) yields 0, 1, 2, 3. Squaring each yields [0, 1, 4, 9].'
+      },
+      {
+        id: 'py_med_2',
+        difficulty: 'Medium',
+        prompt: 'What is the key difference between a Python list and a Python tuple?',
+        options: [
+          'Lists cannot store strings; tuples can',
+          'Lists are mutable; tuples are immutable (cannot be changed after creation)',
+          'Tuples are slower than lists in all cases',
+          'Lists use parentheses; tuples use curly braces'
+        ],
+        correctIndex: 1,
+        explanation: 'Tuples are immutable; once created, elements cannot be modified, added, or removed.'
+      },
+      {
+        id: 'py_med_3',
+        difficulty: 'Medium',
+        prompt: 'In a dictionary d = {"a": 1, "b": 2}, what happens when calling d.get("c", 0)?',
+        options: ['KeyError exception', 'Returns None', 'Returns default value 0 without raising an error', 'Adds "c": 0 to dictionary'],
+        correctIndex: 2,
+        explanation: 'dict.get(key, default) safely retrieves values, returning the default if the key is absent.'
+      },
+      {
+        id: 'py_med_4',
+        difficulty: 'Medium',
+        prompt: 'What does the slice s[::-1] do on a string s = "hello"?',
+        options: ['Removes first letter', 'Reverses the string to "olleh"', 'Capitalizes each letter', 'Returns empty string'],
+        correctIndex: 1,
+        explanation: 'A step size of -1 traverses the sequence in reverse order.'
+      },
+      {
+        id: 'py_med_5',
+        difficulty: 'Medium',
+        prompt: 'What is the purpose of the "finally" block in Python exception handling?',
+        options: [
+          'Runs only if an exception is thrown',
+          'Executes always, whether an exception occurred or not (useful for cleanup)',
+          'Suppresses all errors',
+          'Restarts the program'
+        ],
+        correctIndex: 1,
+        explanation: 'The finally block always runs, making it ideal for closing files and releasing resources.'
+      },
+      // 5 Hard
+      {
+        id: 'py_hard_1',
+        difficulty: 'Hard',
+        prompt: 'What is a Python generator and which keyword distinguishes it from a regular function?',
+        options: [
+          'A class with __init__',
+          'A function that uses "yield" to lazily produce values one at a time on demand',
+          'A compiler optimization flag',
+          'An external C library'
+        ],
+        correctIndex: 1,
+        explanation: 'The yield keyword turns a function into a generator that produces items on the fly without storing the full sequence in memory.'
+      },
+      {
+        id: 'py_hard_2',
+        difficulty: 'Hard',
+        prompt: 'What does the Global Interpreter Lock (GIL) in CPython do?',
+        options: [
+          'Encrypts memory addresses',
+          'Restricts CPU-bound Python threads so only one thread executes Python bytecode at a time',
+          'Prevents imports of third-party libraries',
+          'Locks files against write access'
+        ],
+        correctIndex: 1,
+        explanation: 'CPython GIL is a mutex that prevents multiple native threads from executing Python bytecodes at once.'
+      },
+      {
+        id: 'py_hard_3',
+        difficulty: 'Hard',
+        prompt: 'In Python decorators, what does functools.wraps do when applied to the wrapper function?',
+        options: [
+          'Compiles the wrapper to C',
+          'Preserves the original function name, docstring, and metadata',
+          'Enforces type checking',
+          'Caches return values'
+        ],
+        correctIndex: 1,
+        explanation: '@wraps copies original function attributes (__name__, __doc__) to preserve metadata.'
+      },
+      {
+        id: 'py_hard_4',
+        difficulty: 'Hard',
+        prompt: 'What happens with default mutable arguments: def add_item(val, target=[]): target.append(val); return target?',
+        options: [
+          'A fresh new empty list is created on each function call',
+          'The default list is instantiated once at function definition time and shared across subsequent calls',
+          'Raises TypeError on second call',
+          'Python garbage collects the list immediately'
+        ],
+        correctIndex: 1,
+        explanation: 'Default arguments are evaluated once at definition time, so mutable defaults persist mutations across calls.'
+      },
+      {
+        id: 'py_hard_5',
+        difficulty: 'Hard',
+        prompt: 'What is the average time complexity of checking membership (x in container) for a Python set vs list?',
+        options: ['O(N) for set, O(1) for list', 'O(1) for set (hash table lookup), O(N) for list', 'O(log N) for both', 'O(N²) for both'],
+        correctIndex: 1,
+        explanation: 'Python sets use hash tables for average O(1) membership testing, whereas lists require O(N) linear scans.'
+      }
+    ];
+  }
+
+  // 3. SCIENCE: BIOLOGY & PHOTOSYNTHESIS
+  else if (isBiology(t)) {
+    pool = [
+      // 5 Low
       {
         id: 'bio_low_1',
         difficulty: 'Low',
@@ -256,8 +424,7 @@ export function generateTopicQuiz(
         correctIndex: 1,
         explanation: 'Photolysis of H2O releases oxygen gas (O2) into the atmosphere.'
       },
-
-      // 5 Medium Level
+      // 5 Med
       {
         id: 'bio_med_1',
         difficulty: 'Medium',
@@ -277,7 +444,7 @@ export function generateTopicQuiz(
       {
         id: 'bio_med_3',
         difficulty: 'Medium',
-        prompt: 'What is the chemical balanced equation for aerobic photosynthesis?',
+        prompt: 'What is the balanced chemical equation for aerobic photosynthesis?',
         options: [
           '6CO2 + 6H2O + light -> C6H12O6 + 6O2',
           'C6H12O6 + 6O2 -> 6CO2 + 6H2O',
@@ -308,8 +475,7 @@ export function generateTopicQuiz(
         correctIndex: 1,
         explanation: 'Stomata surrounded by guard cells open and close to balance gas exchange with transpiration.'
       },
-
-      // 5 Hard Level
+      // 5 Hard
       {
         id: 'bio_hard_1',
         difficulty: 'Hard',
@@ -336,7 +502,7 @@ export function generateTopicQuiz(
         difficulty: 'Hard',
         prompt: 'What evolutionary adaptation allows C4 and CAM plants to thrive in hot, arid conditions?',
         options: [
-          'They don\'t require sunlight at all',
+          'They do not require sunlight at all',
           'Spatial or temporal separation of CO2 capture to minimize photorespiration and water loss',
           'They only produce oxygen without glucose',
           'They completely lack stomata'
@@ -350,7 +516,7 @@ export function generateTopicQuiz(
         prompt: 'In cellular respiration, what is the net ATP yield per glucose molecule under ideal aerobic conditions?',
         options: ['2 ATP', '4 ATP', '30 to 32 ATP', '100 ATP'],
         correctIndex: 2,
-        explanation: 'Aerobic cellular respiration typically produces a net theoretical yield of 30-32 (or 36-38) ATP molecules.'
+        explanation: 'Aerobic cellular respiration typically produces a net theoretical yield of 30-32 ATP molecules.'
       },
       {
         id: 'bio_hard_5',
@@ -368,19 +534,10 @@ export function generateTopicQuiz(
     ];
   }
 
-  // ==========================================
-  // 3. MATHEMATICS, ALGEBRA & EQUATIONS
-  // ==========================================
-  else if (
-    t.includes('math') ||
-    t.includes('algebra') ||
-    t.includes('equation') ||
-    t.includes('fraction') ||
-    t.includes('quadratic') ||
-    t.includes('calculus')
-  ) {
+  // 4. MATHEMATICS: ALGEBRA & CALCULUS
+  else if (isMathematics(t)) {
     pool = [
-      // 5 Low Level
+      // 5 Low
       {
         id: 'math_low_1',
         difficulty: 'Low',
@@ -431,8 +588,7 @@ export function generateTopicQuiz(
         correctIndex: 2,
         explanation: '5! = 5 × 4 × 3 × 2 × 1 = 120.'
       },
-
-      // 5 Medium Level
+      // 5 Med
       {
         id: 'math_med_1',
         difficulty: 'Medium',
@@ -458,12 +614,7 @@ export function generateTopicQuiz(
         id: 'math_med_3',
         difficulty: 'Medium',
         prompt: 'In ax² + bx + c = 0, what does a discriminant (b² - 4ac) greater than 0 indicate?',
-        options: [
-          'Two distinct real roots',
-          'One repeated real root',
-          'Two complex/imaginary roots',
-          'No solutions exist'
-        ],
+        options: ['Two distinct real roots', 'One repeated real root', 'Two complex/imaginary roots', 'No solutions exist'],
         correctIndex: 0,
         explanation: 'If b² - 4ac > 0, the square root yields two distinct real numbers, producing two distinct real roots.'
       },
@@ -483,8 +634,7 @@ export function generateTopicQuiz(
         correctIndex: 2,
         explanation: 'Difference of squares: (x - 3)(x + 3) = 0, so x = 3 or x = -3.'
       },
-
-      // 5 Hard Level
+      // 5 Hard
       {
         id: 'math_hard_1',
         difficulty: 'Hard',
@@ -528,215 +678,659 @@ export function generateTopicQuiz(
     ];
   }
 
-  // ==========================================
-  // 4. UNIVERSAL ACADEMIC & GENERAL TOPICS
-  // ==========================================
-  else {
+  // 5. PHYSICS: FORCES, MOTION & NEWTON'S LAWS
+  else if (isPhysics(t)) {
     pool = [
-      // 5 Low Level
+      // 5 Low
       {
-        id: 'gen_low_1',
+        id: 'phys_low_1',
         difficulty: 'Low',
-        prompt: `In the foundational study of ${topic}, what is the first priority when approaching a problem?`,
-        options: [
-          'Identify the given facts, variables, and what is being asked',
-          'Guess the most common answer option',
-          'Skip reading the problem statement',
-          'Change the units arbitrarily'
-        ],
+        prompt: "What is Newton's Second Law of Motion expressed as a formula?",
+        options: ['F = m × a', 'E = mc²', 'v = d / t', 'p = m × v'],
         correctIndex: 0,
-        explanation: 'Clearly identifying given information and requirements prevents foundational errors.'
+        explanation: 'Newton\'s Second Law states that force equals mass multiplied by acceleration (F = ma).'
       },
       {
-        id: 'gen_low_2',
+        id: 'phys_low_2',
         difficulty: 'Low',
-        prompt: `Which approach ensures your definitions in ${topic} remain accurate?`,
+        prompt: 'What is the difference between speed and velocity in physics?',
         options: [
-          'Rely solely on intuitive guesses',
-          'Verify foundational rules and standardized terminology',
-          'Ignore boundary conditions',
-          'Never cross-reference textbook examples'
+          'Speed has direction, velocity does not',
+          'Velocity is a vector quantity (has magnitude AND direction); speed is a scalar',
+          'They are identical in all aspects',
+          'Speed is measured in Newtons, velocity in Joules'
         ],
         correctIndex: 1,
-        explanation: 'Standard terminology and foundational axioms provide the grounding for all correct work.'
+        explanation: 'Velocity specifies both speed and direction of motion, making it a vector quantity.'
       },
       {
-        id: 'gen_low_3',
+        id: 'phys_low_3',
         difficulty: 'Low',
-        prompt: `Why is unit consistency critical when solving quantitative problems in ${topic}?`,
-        options: [
-          'It is strictly aesthetic and does not affect the answer',
-          'Mismatched units cause dimensional errors and incorrect numerical magnitudes',
-          'Units cancel out automatically in all calculations',
-          'Units only matter in geometry'
-        ],
-        correctIndex: 1,
-        explanation: 'Dimensional analysis guarantees that operations are physically and mathematically valid.'
+        prompt: 'What is the standard acceleration due to gravity near Earth\'s surface (g)?',
+        options: ['9.8 m/s²', '3.14 m/s²', '100 m/s²', '0 m/s²'],
+        correctIndex: 0,
+        explanation: 'Free-fall gravitational acceleration on Earth is approximately 9.8 meters per second squared.'
       },
       {
-        id: 'gen_low_4',
+        id: 'phys_low_4',
         difficulty: 'Low',
-        prompt: `What is the best way to verify an algebraic or logical deduction in ${topic}?`,
-        options: [
-          'Substitute the solution back into the original condition',
-          'Assume the first calculation was error-free',
-          'Reverse the sign arbitrarily',
-          'Look for the longest answer choice'
-        ],
-        correctIndex: 0,
-        explanation: 'Back-substitution confirms whether candidate answers satisfy the initial conditions.'
+        prompt: 'Which of Newton\'s laws states that every action has an equal and opposite reaction?',
+        options: ['First Law (Inertia)', 'Second Law (F=ma)', 'Third Law (Action-Reaction)', 'Law of Universal Gravitation'],
+        correctIndex: 2,
+        explanation: 'Newton\'s Third Law states that forces always occur in matched action-reaction pairs.'
       },
       {
-        id: 'gen_low_5',
+        id: 'phys_low_5',
         difficulty: 'Low',
-        prompt: `In ${topic}, what does a controlled variable represent in an experiment?`,
-        options: [
-          'The factor deliberately altered by the researcher',
-          'A factor kept constant to prevent confounding the observed result',
-          'The outcome measurement',
-          'An unintended error'
-        ],
-        correctIndex: 1,
-        explanation: 'Control variables are held constant so that any observed change is due to the independent variable.'
+        prompt: 'What is the SI unit of Force?',
+        options: ['Joule (J)', 'Watt (W)', 'Newton (N)', 'Pascal (Pa)'],
+        correctIndex: 2,
+        explanation: 'The SI unit of force is the Newton (1 N = 1 kg·m/s²).'
       },
-
-      // 5 Medium Level
+      // 5 Med
       {
-        id: 'gen_med_1',
+        id: 'phys_med_1',
         difficulty: 'Medium',
-        prompt: `When synthesizing concepts in ${topic}, how do primary causes differ from secondary symptoms?`,
-        options: [
-          'Symptoms originate the system; causes are side effects',
-          'Primary causes drive underlying mechanisms, while symptoms are visible manifestations',
-          'There is no distinction between cause and symptom',
-          'Causes only occur at the conclusion'
-        ],
+        prompt: 'A 10 kg box is pushed across a frictionless surface with a net force of 50 N. What is its acceleration?',
+        options: ['0.2 m/s²', '5 m/s²', '500 m/s²', '10 m/s²'],
         correctIndex: 1,
-        explanation: 'Root causes drive mechanisms, whereas symptoms are downstream observable effects.'
+        explanation: 'Using a = F / m: a = 50 N / 10 kg = 5 m/s².'
       },
       {
-        id: 'gen_med_2',
+        id: 'phys_med_2',
         difficulty: 'Medium',
-        prompt: `In problem-solving within ${topic}, what is the purpose of testing boundary conditions (e.g. 0, 1, or infinity)?`,
-        options: [
-          'To intentionally cause calculations to fail',
-          'To confirm behavior at extreme limits and catch formula or logic errors',
-          'To replace the general formula entirely',
-          'Boundary testing is only used in literature'
-        ],
+        prompt: 'What happens to the kinetic energy of an object if its velocity is doubled?',
+        options: ['It doubles (2×)', 'It quadruples (4×)', 'It remains unchanged', 'It halves (0.5×)'],
         correctIndex: 1,
-        explanation: 'Boundary cases quickly highlight whether a formula behaves rationally at edges.'
+        explanation: 'Kinetic energy KE = 0.5 * m * v². Since v is squared, doubling velocity increases KE by 2² = 4 times.'
       },
       {
-        id: 'gen_med_3',
+        id: 'phys_med_3',
         difficulty: 'Medium',
-        prompt: `Why is the principle of conservation (mass, energy, momentum) central across ${topic}?`,
-        options: [
-          'It states that key quantities cannot appear or disappear spontaneously in a closed system',
-          'It allows equations to change balance arbitrarily',
-          'It only applies in open atmospheric conditions',
-          'It eliminates the need for mathematical rigor'
-        ],
+        prompt: 'What law of physics explains why passengers lurch forward when a bus suddenly brakes?',
+        options: ['Inertia (Newton\'s First Law)', 'Bernoulli\'s principle', 'Coulomb\'s law', 'Ohm\'s law'],
         correctIndex: 0,
-        explanation: 'Conservation laws set the boundary equations for all equilibrium calculations.'
+        explanation: 'Inertia keeps the passengers in forward motion until an external stopping force acts upon them.'
       },
       {
-        id: 'gen_med_4',
+        id: 'phys_med_4',
         difficulty: 'Medium',
-        prompt: `When analyzing opposing arguments or mechanisms in ${topic}, what yields the most rigorous evaluation?`,
-        options: [
-          'Dismissing counterarguments without evidence',
-          'Comparing empirical evidence, replicability, and predictive validity',
-          'Choosing the oldest theory available',
-          'Voting based on popular sentiment'
-        ],
-        correctIndex: 1,
-        explanation: 'Empirical data and testable predictions provide the standard of scientific validity.'
+        prompt: 'What is the formula for gravitational potential energy near Earth\'s surface?',
+        options: ['PE = mgh', 'PE = 0.5 mv²', 'PE = F × d', 'PE = m / g'],
+        correctIndex: 0,
+        explanation: 'Gravitational potential energy is calculated as mass × gravitational acceleration × height (mgh).'
       },
       {
-        id: 'gen_med_5',
+        id: 'phys_med_5',
         difficulty: 'Medium',
-        prompt: `What is the danger of confounding variables in an analysis of ${topic}?`,
-        options: [
-          'They clarify the direct relationship',
-          'They can introduce false correlations and mask the true causal relationship',
-          'They make calculations faster',
-          'They have zero mathematical influence'
-        ],
+        prompt: 'In an isolated system with no external forces, what quantity is always strictly conserved during a collision?',
+        options: ['Kinetic energy only', 'Total momentum', 'Temperature', 'Speed'],
         correctIndex: 1,
-        explanation: 'Confounders distort the observed association between treatment and outcome.'
+        explanation: 'Total linear momentum is conserved in all closed-system collisions (both elastic and inelastic).'
       },
-
-      // 5 Hard Level
+      // 5 Hard
       {
-        id: 'gen_hard_1',
+        id: 'phys_hard_1',
         difficulty: 'Hard',
-        prompt: `In multi-variable systems within ${topic}, what does non-linear feedback imply?`,
-        options: [
-          'Effects are always strictly proportional to causes',
-          'Small initial fluctuations can trigger disproportionately large cascading responses',
-          'The system stops changing forever',
-          'All equations simplify to linear addition'
-        ],
+        prompt: 'If the distance between two gravitational masses is tripled (3r), how does the gravitational force change?',
+        options: ['Decreases to 1/3', 'Decreases to 1/9', 'Increases by 3 times', 'Remains unchanged'],
         correctIndex: 1,
-        explanation: 'Non-linear feedback creates complex dynamics where inputs produce amplified or damped non-proportional outputs.'
+        explanation: 'Newton\'s Law of Gravitation follows an inverse-square law: F ∝ 1/r². Tripling r gives 1/(3²) = 1/9 the original force.'
       },
       {
-        id: 'gen_hard_2',
+        id: 'phys_hard_2',
         difficulty: 'Hard',
-        prompt: `How does sensitivity analysis enhance conclusions drawn in ${topic}?`,
+        prompt: 'What provides the centripetal force required to keep a satellite in circular orbit around Earth?',
+        options: ['Atmospheric pressure', 'Earth\'s gravitational attraction', 'Solar wind', 'The satellite\'s engine thrust'],
+        correctIndex: 1,
+        explanation: 'Earth\'s gravitational pull acts directly toward Earth\'s center, providing the needed centripetal acceleration.'
+      },
+      {
+        id: 'phys_hard_3',
+        difficulty: 'Hard',
+        prompt: 'In an inelastic collision between two identical cars that stick together after impact, what happens to kinetic energy?',
+        options: ['It increases', 'It is 100% conserved', 'A portion of kinetic energy is converted to thermal, acoustic, and deformation energy', 'It vanishes entirely'],
+        correctIndex: 2,
+        explanation: 'Inelastic collisions conserve total momentum, but kinetic energy is dissipated into heat, sound, and structural deformation.'
+      },
+      {
+        id: 'phys_hard_4',
+        difficulty: 'Hard',
+        prompt: 'What is terminal velocity of a falling skydiver?',
         options: [
-          'It measures how changes in model assumptions affect the reliability of the outcome',
-          'It eliminates all uncertainty completely',
-          'It replaces empirical evidence with intuition',
-          'It guarantees a single immutable answer'
+          'The speed of sound',
+          'The constant velocity reached when upward drag force equals downward gravitational force (net force = 0)',
+          'The maximum speed of light',
+          'Zero speed'
         ],
+        correctIndex: 1,
+        explanation: 'When aerodynamic drag equals weight, acceleration drops to zero and the object falls at constant terminal velocity.'
+      },
+      {
+        id: 'phys_hard_5',
+        difficulty: 'Hard',
+        prompt: 'What is the First Law of Thermodynamics fundamentally equivalent to?',
+        options: ['Law of Conservation of Energy', 'Law of Universal Gravitation', 'Ideal Gas Law', 'Archimedes Principle'],
         correctIndex: 0,
-        explanation: 'Sensitivity analysis reveals which parameters drive outcomes and where precision matters most.'
-      },
-      {
-        id: 'gen_hard_3',
-        difficulty: 'Hard',
-        prompt: `What distinguishes deductive reasoning from inductive reasoning in rigorous work on ${topic}?`,
-        options: [
-          'Deductive starts with general axioms to guarantee specific truths; inductive extrapolates general patterns from specific observations',
-          'Inductive is 100% certain while deductive is always a guess',
-          'Deductive only applies to poetry',
-          'They are interchangeable terms'
-        ],
-        correctIndex: 0,
-        explanation: 'Deductive reasoning moves from general laws to specific instances; induction builds general rules from sample observations.'
-      },
-      {
-        id: 'gen_hard_4',
-        difficulty: 'Hard',
-        prompt: `When evaluating an asymptotic limit in ${topic}, what does the limit describe?`,
-        options: [
-          'The exact starting value at t = 0',
-          'The stable boundary value approached as an independent variable grows arbitrarily large',
-          'A random noise fluctuation',
-          'An undefined mathematical error'
-        ],
-        correctIndex: 1,
-        explanation: 'Asymptotic limits describe long-term behavior as variables approach infinity or boundaries.'
-      },
-      {
-        id: 'gen_hard_5',
-        difficulty: 'Hard',
-        prompt: `In theoretical frameworks for ${topic}, what is Occam's Razor?`,
-        options: [
-          'The most complex theory with the most variables is always correct',
-          'Among competing hypotheses that predict equally well, the one with the fewest assumptions is favored',
-          'All scientific laws must be rewritten every decade',
-          'Mathematical proofs can omit logical steps'
-        ],
-        correctIndex: 1,
-        explanation: 'Parsimony states that simpler models with fewer assumptions are preferable when predictive accuracy is equal.'
+        explanation: 'The First Law of Thermodynamics states ΔU = Q - W, which is the conservation of energy applied to thermodynamic systems.'
       }
     ];
   }
 
-  // If user requested 15 tiered questions, return the full 15 (5 Low, 5 Medium, 5 Hard)
+  // 6. CHEMISTRY: ATOMS, BONDS & REACTIONS
+  else if (isChemistry(t)) {
+    pool = [
+      // 5 Low
+      {
+        id: 'chem_low_1',
+        difficulty: 'Low',
+        prompt: 'What subatomic particles are located inside the nucleus of an atom?',
+        options: ['Electrons and protons', 'Protons and neutrons', 'Electrons and photons', 'Neutrons and electrons'],
+        correctIndex: 1,
+        explanation: 'Protons and neutrons reside in the nucleus, while electrons orbit in electron clouds.'
+      },
+      {
+        id: 'chem_low_2',
+        difficulty: 'Low',
+        prompt: 'What is the pH of a neutral solution (like pure distilled water at 25°C)?',
+        options: ['0', '7', '14', '1'],
+        correctIndex: 1,
+        explanation: 'A pH of 7 represents neutral. Values < 7 are acidic and > 7 are basic/alkaline.'
+      },
+      {
+        id: 'chem_low_3',
+        difficulty: 'Low',
+        prompt: 'What chemical bond is formed when electrons are shared between two nonmetal atoms?',
+        options: ['Ionic bond', 'Covalent bond', 'Metallic bond', 'Hydrogen bond'],
+        correctIndex: 1,
+        explanation: 'Covalent bonds form when nonmetal atoms share pairs of valence electrons.'
+      },
+      {
+        id: 'chem_low_4',
+        difficulty: 'Low',
+        prompt: 'What is the chemical symbol for Gold on the periodic table?',
+        options: ['Ag', 'Au', 'Fe', 'Gd'],
+        correctIndex: 1,
+        explanation: 'Au (from Latin Aurum) is the chemical symbol for Gold.'
+      },
+      {
+        id: 'chem_low_5',
+        difficulty: 'Low',
+        prompt: 'What gas is evolved when an active metal reacts with dilute hydrochloric acid?',
+        options: ['Oxygen', 'Hydrogen (H2)', 'Carbon Dioxide', 'Nitrogen'],
+        correctIndex: 1,
+        explanation: 'Metals displace hydrogen from acids: Zn + 2HCl -> ZnCl2 + H2.'
+      },
+      // 5 Med
+      {
+        id: 'chem_med_1',
+        difficulty: 'Medium',
+        prompt: 'What is the molar mass of water (H2O), given H = 1 g/mol and O = 16 g/mol?',
+        options: ['17 g/mol', '18 g/mol', '32 g/mol', '16 g/mol'],
+        correctIndex: 1,
+        explanation: '2(1) + 16 = 18 g/mol.'
+      },
+      {
+        id: 'chem_med_2',
+        difficulty: 'Medium',
+        prompt: 'Which elements on the periodic table have complete valence shells and are largely chemically inert?',
+        options: ['Alkali metals', 'Halogens', 'Noble gases', 'Transition metals'],
+        correctIndex: 2,
+        explanation: 'Noble gases (Group 18: Helium, Neon, Argon, etc.) have full outer valence octets.'
+      },
+      {
+        id: 'chem_med_3',
+        difficulty: 'Medium',
+        prompt: 'What does Le Chatelier\'s Principle predict when pressure is increased on a gaseous equilibrium system?',
+        options: [
+          'Reaction stops completely',
+          'Equilibrium shifts toward the side with fewer moles of gas',
+          'Temperature drops to absolute zero',
+          'Equilibrium never changes'
+        ],
+        correctIndex: 1,
+        explanation: 'Increasing pressure shifts equilibrium to counteract the increase by favoring fewer gas molecules.'
+      },
+      {
+        id: 'chem_med_4',
+        difficulty: 'Medium',
+        prompt: 'In a redox reaction, what happens to the species that undergoes oxidation?',
+        options: ['It gains electrons (LEO says GER)', 'It loses electrons', 'It gains protons', 'Its mass doubles'],
+        correctIndex: 1,
+        explanation: 'Oxidation is the Loss of electrons (OIL RIG: Oxidation Is Loss, Reduction Is Gain).'
+      },
+      {
+        id: 'chem_med_5',
+        difficulty: 'Medium',
+        prompt: 'What type of bond forms between Sodium (Na) and Chlorine (Cl) in table salt (NaCl)?',
+        options: ['Pure covalent', 'Ionic bond', 'Nonpolar covalent', 'Van der Waals'],
+        correctIndex: 1,
+        explanation: 'Sodium transfers an electron to Chlorine, forming Na+ and Cl- held by electrostatic attraction (ionic bond).'
+      },
+      // 5 Hard
+      {
+        id: 'chem_hard_1',
+        difficulty: 'Hard',
+        prompt: 'What does the hybridization of carbon in methane (CH4) equal?',
+        options: ['sp', 'sp²', 'sp³', 'dsp²'],
+        correctIndex: 2,
+        explanation: 'Carbon in methane forms 4 single sigma bonds with tetrahedral geometry, corresponding to sp³ hybridization.'
+      },
+      {
+        id: 'chem_hard_2',
+        difficulty: 'Hard',
+        prompt: 'According to the Arrhenius equation k = A * e^(-Ea / RT), what happens to reaction rate when temperature increases?',
+        options: [
+          'Rate constant k decreases exponentially',
+          'Rate constant k increases because more reactant particles possess energy exceeding the activation energy (Ea)',
+          'Activation energy disappears',
+          'Reaction becomes endothermic automatically'
+        ],
+        correctIndex: 1,
+        explanation: 'Higher temperature exponentially increases the fraction of collisions exceeding the activation energy threshold.'
+      },
+      {
+        id: 'chem_hard_3',
+        difficulty: 'Hard',
+        prompt: 'For a spontaneous reaction under standard conditions, what must be true about Gibbs Free Energy (ΔG)?',
+        options: ['ΔG > 0 (positive)', 'ΔG < 0 (negative)', 'ΔG = 0', 'ΔG is infinite'],
+        correctIndex: 1,
+        explanation: 'A reaction is thermodynamically spontaneous at constant T and P when ΔG is negative (ΔG < 0).'
+      },
+      {
+        id: 'chem_hard_4',
+        difficulty: 'Hard',
+        prompt: 'Why is water (H2O) a polar molecule with a bent molecular shape rather than linear?',
+        options: [
+          'Oxygen has two lone pairs that exert repulsive forces on the bonding electron pairs',
+          'Hydrogen is heavier than oxygen',
+          'Water only exists as a solid',
+          'Oxygen forms triple bonds'
+        ],
+        correctIndex: 0,
+        explanation: 'The two lone pairs on oxygen create an asymmetrical tetrahedral electron domain geometry with a ~104.5° bent angle.'
+      },
+      {
+        id: 'chem_hard_5',
+        difficulty: 'Hard',
+        prompt: 'What is the oxidation state of Chromium in the dichromate ion (Cr2O7)²⁻?',
+        options: ['+3', '+6', '+7', '+2'],
+        correctIndex: 1,
+        explanation: '7 oxygens contribute -14. With net charge -2, 2(Cr) - 14 = -2 => 2(Cr) = 12 => Cr = +6.'
+      }
+    ];
+  }
+
+  // 7. HISTORY: WORLD HISTORY & REVOLUTIONS
+  else if (isHistory(t)) {
+    pool = [
+      // 5 Low
+      {
+        id: 'hist_low_1',
+        difficulty: 'Low',
+        prompt: 'In which year did the French Revolution begin with the storming of the Bastille?',
+        options: ['1776', '1789', '1804', '1815'],
+        correctIndex: 1,
+        explanation: 'The storming of the Bastille took place on July 14, 1789 in Paris.'
+      },
+      {
+        id: 'hist_low_2',
+        difficulty: 'Low',
+        prompt: 'Who was the king of France during the outbreak of the French Revolution?',
+        options: ['Louis XIV', 'Louis XVI', 'Napoleon Bonaparte', 'Charles de Gaulle'],
+        correctIndex: 1,
+        explanation: 'King Louis XVI and Queen Marie Antoinette ruled France at the start of the 1789 revolution.'
+      },
+      {
+        id: 'hist_low_3',
+        difficulty: 'Low',
+        prompt: 'In pre-revolutionary France, which Estate represented 98% of the population, including peasants and merchants?',
+        options: ['First Estate (Clergy)', 'Second Estate (Nobility)', 'Third Estate (Commoners)', 'Fourth Estate'],
+        correctIndex: 2,
+        explanation: 'The Third Estate comprised the entire commoner population who bore almost all taxes.'
+      },
+      {
+        id: 'hist_low_4',
+        difficulty: 'Low',
+        prompt: 'In which year did World War I end with the signing of the Armistice?',
+        options: ['1914', '1918', '1939', '1945'],
+        correctIndex: 1,
+        explanation: 'World War I concluded on November 11, 1918.'
+      },
+      {
+        id: 'hist_low_5',
+        difficulty: 'Low',
+        prompt: 'What ancient civilization built the Pyramids of Giza along the Nile River?',
+        options: ['Roman Empire', 'Ancient Egypt', 'Mesopotamia', 'Inca Empire'],
+        correctIndex: 1,
+        explanation: 'Ancient Egyptians built the Giza pyramids as monumental royal tombs.'
+      },
+      // 5 Med
+      {
+        id: 'hist_med_1',
+        difficulty: 'Medium',
+        prompt: 'What radical phase of the French Revolution (1793–1794) was led by Maximilien Robespierre?',
+        options: ['The Enlightenment', 'The Reign of Terror', 'The Hundred Days', 'The Pax Romana'],
+        correctIndex: 1,
+        explanation: 'The Committee of Public Safety under Robespierre executed thousands during the Reign of Terror.'
+      },
+      {
+        id: 'hist_med_2',
+        difficulty: 'Medium',
+        prompt: 'What document adopted in 1789 declared that all men are born free and equal in rights?',
+        options: [
+          'Magna Carta',
+          'Declaration of the Rights of Man and of the Citizen',
+          'Treaty of Versailles',
+          'The Communist Manifesto'
+        ],
+        correctIndex: 1,
+        explanation: 'Adopted by France\'s National Constituent Assembly in August 1789.'
+      },
+      {
+        id: 'hist_med_3',
+        difficulty: 'Medium',
+        prompt: 'What was the direct spark that ignited World War I in June 1914?',
+        options: [
+          'The sinking of the Lusitania',
+          'The assassination of Archduke Franz Ferdinand in Sarajevo',
+          'The invasion of Poland',
+          'The Russian Revolution'
+        ],
+        correctIndex: 1,
+        explanation: 'Archduke Franz Ferdinand of Austria was assassinated by Gavrilo Princip on June 28, 1914.'
+      },
+      {
+        id: 'hist_med_4',
+        difficulty: 'Medium',
+        prompt: 'Which military leader seized power in France in 1799 and later crowned himself Emperor?',
+        options: ['Robespierre', 'Napoleon Bonaparte', 'Danton', 'Marat'],
+        correctIndex: 1,
+        explanation: 'Napoleon Bonaparte took control in the Coup of 18 Brumaire (1799) and was crowned Emperor in 1804.'
+      },
+      {
+        id: 'hist_med_5',
+        difficulty: 'Medium',
+        prompt: 'What treaty officially ended World War I in 1919 and imposed heavy reparations on Germany?',
+        options: ['Treaty of Paris', 'Treaty of Versailles', 'Congress of Vienna', 'Treaty of Ghent'],
+        correctIndex: 1,
+        explanation: 'The 1919 Treaty of Versailles placed war guilt and massive financial reparations on Germany.'
+      },
+      // 5 Hard
+      {
+        id: 'hist_hard_1',
+        difficulty: 'Hard',
+        prompt: 'What financial crisis directly compelled King Louis XVI to convene the Estates-General in May 1789 for the first time in 175 years?',
+        options: [
+          'Rampant inflation from gold mines',
+          'Massive national debt from funding foreign wars (including the American Revolution) and an inequitable tax system',
+          'The collapse of the French East India Company',
+          'A nationwide banking holiday'
+        ],
+        correctIndex: 1,
+        explanation: 'France faced state bankruptcy caused by military loans, royal spending, and tax exemption for nobility and clergy.'
+      },
+      {
+        id: 'hist_hard_2',
+        difficulty: 'Hard',
+        prompt: 'What was the significance of the Tennis Court Oath (Serment du Jeu de Paume) in June 1789?',
+        options: [
+          'The nobility pledged loyalty to the King',
+          'Representatives of the Third Estate swore not to separate until they had written a French Constitution',
+          'France declared war on Austria',
+          'The King dissolved the parliament permanently'
+        ],
+        correctIndex: 1,
+        explanation: 'Locked out of their hall, delegates met on a nearby indoor tennis court and pledged to create a constitution.'
+      },
+      {
+        id: 'hist_hard_3',
+        difficulty: 'Hard',
+        prompt: 'What was the Schlieffen Plan devised by Germany prior to WWI?',
+        options: [
+          'A defensive naval blockade in the North Sea',
+          'A rapid sweep through neutral Belgium to quickly knock out France before pivoting east against Russia',
+          'An alliance with the United States',
+          'An economic embargo on Britain'
+        ],
+        correctIndex: 1,
+        explanation: 'Germany planned to avoid a prolonged two-front war by defeating France within six weeks through Belgium.'
+      },
+      {
+        id: 'hist_hard_4',
+        difficulty: 'Hard',
+        prompt: 'How did the Civil Constitution of the Clergy (1790) alter the Catholic Church in revolutionary France?',
+        options: [
+          'It made Catholicism the exclusive state religion',
+          'It subordinated the French Catholic Church to the civil government and required priests to swear allegiance to the state',
+          'It moved the Papacy to Avignon permanently',
+          'It outlawed religion entirely'
+        ],
+        correctIndex: 1,
+        explanation: 'It turned clergy into salaried public servants elected by parishioners, causing a deep rift with Rome and rural Catholics.'
+      },
+      {
+        id: 'hist_hard_5',
+        difficulty: 'Hard',
+        prompt: 'What major geopolitical shift resulted from the 1648 Peace of Westphalia?',
+        options: [
+          'The reunification of the Roman Empire',
+          'The establishment of the concept of sovereign nation-states and non-interference in domestic affairs',
+          'The colonization of South America',
+          'The end of the Napoleonic Wars'
+        ],
+        correctIndex: 1,
+        explanation: 'Westphalia ended the Thirty Years\' War and founded modern international relations based on state sovereignty.'
+      }
+    ];
+  }
+
+  // 8. UNIVERSAL ADAPTIVE GENERATOR FOR ANY OTHER TOPIC
+  else {
+    const capitalized = topic.charAt(0).toUpperCase() + topic.slice(1);
+    pool = [
+      // 5 Low
+      {
+        id: 'univ_low_1',
+        difficulty: 'Low',
+        prompt: `In the core study of ${capitalized}, what is the essential first step when approaching a fundamental concept?`,
+        options: [
+          'Identify key definitions, axioms, and given variables',
+          'Memorize answers without understanding definitions',
+          'Ignore boundary conditions',
+          'Assume all properties are constant'
+        ],
+        correctIndex: 0,
+        explanation: `Understanding the precise definitions and parameters in ${capitalized} establishes the foundation for problem solving.`
+      },
+      {
+        id: 'univ_low_2',
+        difficulty: 'Low',
+        prompt: `Which principle is fundamental to verifying solutions in ${capitalized}?`,
+        options: [
+          'Consistency across units, equations, and empirical observations',
+          'Relying purely on intuitive guesswork',
+          'Discarding counter-evidence',
+          'Always picking the shortest answer'
+        ],
+        correctIndex: 0,
+        explanation: `Consistency across standardized laws and empirical observations is critical when analyzing ${capitalized}.`
+      },
+      {
+        id: 'univ_low_3',
+        difficulty: 'Low',
+        prompt: `How are foundational rules in ${capitalized} applied in real-world scenarios?`,
+        options: [
+          'By modeling complex systems into simplified, measurable components',
+          'By ignoring environmental factors',
+          'By assuming systems never undergo change',
+          'By replacing rigorous models with opinion'
+        ],
+        correctIndex: 0,
+        explanation: `Scientific and academic practice simplifies real-world systems into verified component models.`
+      },
+      {
+        id: 'univ_low_4',
+        difficulty: 'Low',
+        prompt: `Why is precise terminology critical in ${capitalized}?`,
+        options: [
+          'It prevents misinterpretations of core mechanisms and theorems',
+          'It is purely decorative',
+          'It makes problems intentionally harder',
+          'It eliminates the need for testing'
+        ],
+        correctIndex: 0,
+        explanation: `Standard terminology ensures unambiguous communication of mechanisms in ${capitalized}.`
+      },
+      {
+        id: 'univ_low_5',
+        difficulty: 'Low',
+        prompt: `In experiments or case studies in ${capitalized}, what purpose does a control variable serve?`,
+        options: [
+          'It is held constant to isolate the effect of the independent variable',
+          'It is the variable being measured',
+          'It is intentionally randomized',
+          'It cancels out the hypothesis'
+        ],
+        correctIndex: 0,
+        explanation: `Controls eliminate confounding influences so observed effects can be attributed to the test variable.`
+      },
+      // 5 Med
+      {
+        id: 'univ_med_1',
+        difficulty: 'Medium',
+        prompt: `When analyzing cause and effect in ${capitalized}, how do direct mechanisms differ from secondary symptoms?`,
+        options: [
+          'Direct mechanisms drive the core process; symptoms are downstream observable effects',
+          'Symptoms cause the underlying phenomenon',
+          'There is no distinction in scientific inquiry',
+          'Mechanisms only appear in theoretical models'
+        ],
+        correctIndex: 0,
+        explanation: `Identifying root mechanisms rather than superficial symptoms is essential in ${capitalized}.`
+      },
+      {
+        id: 'univ_med_2',
+        difficulty: 'Medium',
+        prompt: `Why is boundary limit testing (e.g. at zero or infinity) valuable when examining formulas or models in ${capitalized}?`,
+        options: [
+          'It highlights edge-case behaviors and reveals logical or mathematical inconsistencies',
+          'It permanently breaks the model',
+          'It replaces the need for general equations',
+          'It only works for whole numbers'
+        ],
+        correctIndex: 0,
+        explanation: `Boundary testing tests whether formulas behave sensibly at extreme operational edges.`
+      },
+      {
+        id: 'univ_med_3',
+        difficulty: 'Medium',
+        prompt: `How does conservation (of mass, energy, or information) govern systems in ${capitalized}?`,
+        options: [
+          'It provides balance equations: input minus output equals accumulation',
+          'It allows energy to appear spontaneously',
+          'It only applies in static states',
+          'It renders calculations obsolete'
+        ],
+        correctIndex: 0,
+        explanation: `Conservation laws set the boundary constraints for all equilibrium analysis in ${capitalized}.`
+      },
+      {
+        id: 'univ_med_4',
+        difficulty: 'Medium',
+        prompt: `What is the most reliable method for evaluating competing hypotheses in ${capitalized}?`,
+        options: [
+          'Comparing empirical predictive accuracy and replicable evidence',
+          'Selecting the most popular theory',
+          'Choosing the explanation with the most jargon',
+          'Relying on tradition alone'
+        ],
+        correctIndex: 0,
+        explanation: `Empirical evidence and reproducibility form the cornerstone of rigorous inquiry.`
+      },
+      {
+        id: 'univ_med_5',
+        difficulty: 'Medium',
+        prompt: `What is a confounding variable in the context of analyzing ${capitalized}?`,
+        options: [
+          'An extraneous factor that correlates with both the independent and dependent variables, skewing conclusions',
+          'The main measurement device',
+          'The constant of proportionality',
+          'A guaranteed outcome'
+        ],
+        correctIndex: 0,
+        explanation: `Confounders distort observed relationships by introducing hidden outside correlations.`
+      },
+      // 5 Hard
+      {
+        id: 'univ_hard_1',
+        difficulty: 'Hard',
+        prompt: `In complex multi-variable analysis of ${capitalized}, what does non-linear feedback imply?`,
+        options: [
+          'Output responses are non-proportional, and small perturbations can cascade into large system changes',
+          'Outputs are always strictly linear and predictable',
+          'The system remains entirely static',
+          'All feedback loops cancel out automatically'
+        ],
+        correctIndex: 0,
+        explanation: `Non-linear feedback creates dynamic tipping points and sensitivity to initial parameters.`
+      },
+      {
+        id: 'univ_hard_2',
+        difficulty: 'Hard',
+        prompt: `How does sensitivity analysis enhance conclusions drawn in ${capitalized}?`,
+        options: [
+          'It identifies which model parameters have the greatest influence on outcomes and where measurement precision matters most',
+          'It eliminates all uncertainty completely',
+          'It replaces physical testing with conjecture',
+          'It guarantees a single immutable truth'
+        ],
+        correctIndex: 0,
+        explanation: `Sensitivity analysis pinpoints high-leverage variables that dominate system behavior.`
+      },
+      {
+        id: 'univ_hard_3',
+        difficulty: 'Hard',
+        prompt: `What distinguishes deductive reasoning from inductive reasoning when formulating theories in ${capitalized}?`,
+        options: [
+          'Deductive moves from established general axioms to specific conclusions; inductive derives general principles from observed sample data',
+          'Inductive is 100% mathematically proven while deductive is always an estimate',
+          'Deductive only applies to humanities',
+          'They are synonyms'
+        ],
+        correctIndex: 0,
+        explanation: `Deductive reasoning proves specific conclusions from axioms; induction generalizes patterns from data.`
+      },
+      {
+        id: 'univ_hard_4',
+        difficulty: 'Hard',
+        prompt: `When evaluating an asymptotic limit in ${capitalized}, what is being described?`,
+        options: [
+          'The stable state or value approached as a variable grows arbitrarily large',
+          'An immediate measurement at time t = 0',
+          'A numerical error in calculation',
+          'A random noise fluctuation'
+        ],
+        correctIndex: 0,
+        explanation: `Asymptotes define long-term boundary behaviors of functions as inputs approach infinity or singularities.`
+      },
+      {
+        id: 'univ_hard_5',
+        difficulty: 'Hard',
+        prompt: `According to Occam's Razor in theoretical frameworks for ${capitalized}, which hypothesis should be preferred?`,
+        options: [
+          'Among competing hypotheses that predict observations equally well, the one requiring the fewest assumptions',
+          'The hypothesis with the most complex variables and layers',
+          'The hypothesis proposed most recently',
+          'The one with circular logic'
+        ],
+        correctIndex: 0,
+        explanation: `Parsimony dictates that simpler models with fewer unproven assumptions are superior when predictive accuracy is equal.`
+      }
+    ];
+  }
+
+  // Tiered 15-question challenge
   if (tiered && questionCount >= 15) {
     const low = pool.filter(q => q.difficulty === 'Low').slice(0, 5);
     const med = pool.filter(q => q.difficulty === 'Medium').slice(0, 5);
@@ -744,20 +1338,19 @@ export function generateTopicQuiz(
     return [...low, ...med, ...hard];
   }
 
-  // If user requested a custom count (e.g. 5 or 10)
+  // 5 Questions: 2 Low, 2 Med, 1 Hard
   if (questionCount === 5) {
-    // 2 Low, 2 Med, 1 Hard
     const low = pool.filter(q => q.difficulty === 'Low').slice(0, 2);
     const med = pool.filter(q => q.difficulty === 'Medium').slice(0, 2);
     const hard = pool.filter(q => q.difficulty === 'Hard').slice(0, 1);
     return [...low, ...med, ...hard];
   }
 
+  // 10 Questions: 4 Low, 4 Med, 2 Hard
   if (questionCount === 10) {
-    // 3 Low, 4 Med, 3 Hard
-    const low = pool.filter(q => q.difficulty === 'Low').slice(0, 3);
+    const low = pool.filter(q => q.difficulty === 'Low').slice(0, 4);
     const med = pool.filter(q => q.difficulty === 'Medium').slice(0, 4);
-    const hard = pool.filter(q => q.difficulty === 'Hard').slice(0, 3);
+    const hard = pool.filter(q => q.difficulty === 'Hard').slice(0, 2);
     return [...low, ...med, ...hard];
   }
 
@@ -765,17 +1358,10 @@ export function generateTopicQuiz(
 }
 
 export function generateTopicFlashcards(topic: string): Flashcard[] {
-  const t = topic.toLowerCase();
+  const t = topic.trim().toLowerCase();
 
-  // Coding & C Programming & Loops
-  if (
-    t.includes('c') ||
-    t.includes('loop') ||
-    t.includes('code') ||
-    t.includes('program') ||
-    t.includes('python') ||
-    t.includes('java')
-  ) {
+  // C Programming
+  if (isCProgramming(t)) {
     return [
       {
         id: 'fc1',
@@ -810,8 +1396,38 @@ export function generateTopicFlashcards(topic: string): Flashcard[] {
     ];
   }
 
+  // Python
+  if (isPython(t)) {
+    return [
+      {
+        id: 'fc1',
+        front: 'Python List Comprehension',
+        back: '[expression for item in iterable if condition]\nExample: [x**2 for x in range(5) if x % 2 == 0] -> [0, 4, 16]',
+        category: 'Python'
+      },
+      {
+        id: 'fc2',
+        front: 'List vs Tuple in Python',
+        back: '• List: Mutable, defined with []\n• Tuple: Immutable, defined with ()\nTuples protect data integrity and have less memory overhead.',
+        category: 'Python Data Structures'
+      },
+      {
+        id: 'fc3',
+        front: 'Dictionary Key Lookup: dict.get()',
+        back: 'dict.get(key, default) safely looks up a key without throwing a KeyError if the key is missing.',
+        category: 'Python'
+      },
+      {
+        id: 'fc4',
+        front: 'Python *args and **kwargs',
+        back: '• *args: passes variable number of positional arguments as a tuple\n• **kwargs: passes variable keyword arguments as a dictionary',
+        category: 'Python Functions'
+      }
+    ];
+  }
+
   // Science & Photosynthesis
-  if (t.includes('photosynthesis') || t.includes('bio') || t.includes('cell') || t.includes('plant')) {
+  if (isBiology(t)) {
     return [
       {
         id: 'fc1',
@@ -841,7 +1457,7 @@ export function generateTopicFlashcards(topic: string): Flashcard[] {
   }
 
   // Mathematics & Algebra
-  if (t.includes('math') || t.includes('algebra') || t.includes('equation') || t.includes('fraction')) {
+  if (isMathematics(t)) {
     return [
       {
         id: 'fc1',
@@ -870,31 +1486,122 @@ export function generateTopicFlashcards(topic: string): Flashcard[] {
     ];
   }
 
-  // Default Flashcards
+  // Physics
+  if (isPhysics(t)) {
+    return [
+      {
+        id: 'fc1',
+        front: "Newton's 3 Laws of Motion",
+        back: '1. Inertia: Objects stay at rest or constant velocity unless acted on by net force.\n2. F = ma: Acceleration is proportional to net force.\n3. Action-Reaction: Forces exist in equal and opposite pairs.',
+        category: 'Physics'
+      },
+      {
+        id: 'fc2',
+        front: 'Kinetic Energy vs Potential Energy',
+        back: '• Kinetic: KE = ½ mv² (energy of motion)\n• Gravitational Potential: PE = mgh (energy of position)\nTotal mechanical energy is conserved in absence of friction.',
+        category: 'Physics'
+      },
+      {
+        id: 'fc3',
+        front: 'Weight vs Mass',
+        back: '• Mass (kg): Amount of matter (constant everywhere).\n• Weight (N): Gravitational force on that mass (W = mg).',
+        category: 'Physics'
+      },
+      {
+        id: 'fc4',
+        front: 'Conservation of Momentum',
+        back: 'In any closed system with no external net forces, total linear momentum before collision equals total momentum after.',
+        category: 'Physics'
+      }
+    ];
+  }
+
+  // Chemistry
+  if (isChemistry(t)) {
+    return [
+      {
+        id: 'fc1',
+        front: 'Covalent vs Ionic Bonds',
+        back: '• Covalent: Nonmetals sharing valence electron pairs.\n• Ionic: Metal transfers electron(s) to nonmetal, forming electrostatic ions (e.g. Na⁺Cl⁻).',
+        category: 'Chemistry'
+      },
+      {
+        id: 'fc2',
+        front: 'pH Scale & Acidity',
+        back: 'pH = -log[H⁺]\n• pH < 7: Acidic (excess H⁺ / H₃O⁺)\n• pH = 7: Neutral\n• pH > 7: Basic / Alkaline (excess OH⁻)',
+        category: 'Chemistry'
+      },
+      {
+        id: 'fc3',
+        front: 'Oxidation vs Reduction (OIL RIG)',
+        back: '• Oxidation Is Loss of electrons.\n• Reduction Is Gain of electrons.',
+        category: 'Chemistry'
+      },
+      {
+        id: 'fc4',
+        front: 'Le Chatelier\'s Principle',
+        back: 'If a chemical system at equilibrium experiences a change in concentration, temperature, or pressure, the equilibrium shifts to counteract that change.',
+        category: 'Chemistry'
+      }
+    ];
+  }
+
+  // History
+  if (isHistory(t)) {
+    return [
+      {
+        id: 'fc1',
+        front: 'The Three Estates in 1789 France',
+        back: '• 1st Estate: Clergy (tax-exempt)\n• 2nd Estate: Nobility (tax-exempt)\n• 3rd Estate: Commoners, peasants & bourgeoisie (98% of population, bore all taxes)',
+        category: 'History'
+      },
+      {
+        id: 'fc2',
+        front: 'Storming of the Bastille',
+        back: 'July 14, 1789: Parisian revolutionaries stormed the medieval fortress/prison, symbolizing the overthrow of royal despotism.',
+        category: 'History'
+      },
+      {
+        id: 'fc3',
+        front: 'Causes of WWI (M-A-I-N)',
+        back: '• Militarism\n• Alliances\n• Imperialism\n• Nationalism\nSparked by the assassination of Archduke Franz Ferdinand.',
+        category: 'History'
+      },
+      {
+        id: 'fc4',
+        front: 'Declaration of the Rights of Man (1789)',
+        back: 'Fundamental charter of human liberties proclaiming that "men are born and remain free and equal in rights".',
+        category: 'History'
+      }
+    ];
+  }
+
+  // Default Flashcards for any custom topic
+  const capitalized = topic.charAt(0).toUpperCase() + topic.slice(1);
   return [
     {
       id: 'fc1',
-      front: `Core Principle of ${topic}`,
-      back: 'The fundamental law or rule governing how this system or concept behaves under standard conditions.',
-      category: topic
+      front: `Core Principle of ${capitalized}`,
+      back: `The fundamental law, theorem, or rule governing how ${capitalized} functions under standard conditions.`,
+      category: capitalized
     },
     {
       id: 'fc2',
-      front: 'Common Trap to Avoid',
-      back: 'Jumping to conclusions without verifying intermediate steps or boundary cases.',
-      category: topic
+      front: `Common Misconception in ${capitalized}`,
+      back: 'Confusing symptoms with root causes, or assuming simplified boundary conditions apply unconditionally.',
+      category: capitalized
     },
     {
       id: 'fc3',
-      front: 'Verification Method',
-      back: 'Test candidate solutions with edge values (0, 1, negatives) or plug back into the original condition.',
-      category: topic
+      front: `Verification Method for ${capitalized}`,
+      back: 'Back-substitute test values into initial boundary conditions and verify dimensional consistency.',
+      category: capitalized
     },
     {
       id: 'fc4',
-      front: 'Exam Quick-Tip',
-      back: 'Annotate key given values and units before starting your solution.',
-      category: topic
+      front: `Exam Quick-Tip for ${capitalized}`,
+      back: 'Carefully annotate known variables, target outcomes, and unit constraints before calculating.',
+      category: capitalized
     }
   ];
 }

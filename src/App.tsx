@@ -302,7 +302,7 @@ export function App() {
               <input
                 type="text"
                 id="custom-quiz-input"
-                placeholder="Enter topic to quiz (e.g. C Loops, Chemical Bonding, Calculus)..."
+                placeholder="Enter any topic (e.g. Photosynthesis, World War 2, Python Lists, Chemical Bonding, Calculus)..."
                 className="input-field"
                 style={{ flex: 1, minWidth: '240px' }}
                 onKeyDown={e => {
@@ -316,7 +316,7 @@ export function App() {
               <button
                 onClick={() => {
                   const input = document.getElementById('custom-quiz-input') as HTMLInputElement;
-                  const topic = input && input.value.trim() ? input.value.trim() : 'C Loops & Syntax';
+                  const topic = input && input.value.trim() ? input.value.trim() : 'Algebra & Equations';
                   setQuizInitialCount(selectedQuizCount);
                   setQuizTopic(topic);
                   if (input) input.value = '';
@@ -330,7 +330,7 @@ export function App() {
               <button
                 onClick={() => {
                   const input = document.getElementById('custom-quiz-input') as HTMLInputElement;
-                  const topic = input && input.value.trim() ? input.value.trim() : 'C Loops & Syntax';
+                  const topic = input && input.value.trim() ? input.value.trim() : 'Algebra & Equations';
                   const generated = generateTopicQuiz(topic, selectedQuizCount, true);
                   generateQuizPDF(topic, generated);
                   confetti({ particleCount: 50, spread: 60 });
@@ -347,9 +347,12 @@ export function App() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: '16px' }}>
               {[
                 { title: 'C Programming & Loops', icon: '💻', count: 15, tag: 'Coding & CS', desc: '5 Low (stdio.h, for/while), 5 Med (tracing, break/continue), 5 Hard (nested loops, off-by-one, pointers)' },
+                { title: 'Python Programming & Logic', icon: '🐍', count: 15, tag: 'Python & CS', desc: '5 Low (def, syntax, lists), 5 Med (comprehensions, dicts, slices), 5 Hard (generators, GIL, decorators)' },
                 { title: 'Photosynthesis & Respiration', icon: '🌿', count: 15, tag: 'Biology', desc: '5 Low (chlorophyll, CO2, ATP), 5 Med (thylakoids, Calvin cycle), 5 Hard (RuBisCO, photorespiration)' },
                 { title: 'Algebra & Equations', icon: '📐', count: 15, tag: 'Mathematics', desc: '5 Low (inverse ops, PEMDAS), 5 Med (quadratic formula, roots), 5 Hard (systems, derivatives, logs)' },
-                { title: 'Newtonian Physics & Forces', icon: '🍎', count: 15, tag: 'Physics', desc: '5 Low (gravity, speed vs velocity), 5 Med (F=ma, conservation), 5 Hard (orbital mechanics, friction)' }
+                { title: 'Newtonian Physics & Forces', icon: '🍎', count: 15, tag: 'Physics', desc: '5 Low (gravity, speed vs velocity), 5 Med (F=ma, conservation), 5 Hard (orbital mechanics, friction)' },
+                { title: 'Chemistry: Atoms & Bonding', icon: '⚗️', count: 15, tag: 'Chemistry', desc: '5 Low (protons/neutrons, pH, bonds), 5 Med (molar mass, Le Chatelier, redox), 5 Hard (sp³ hybridization, Arrhenius)' },
+                { title: 'French Revolution & Modern History', icon: '🏰', count: 15, tag: 'History', desc: '5 Low (Bastille, Estates, Louis XVI), 5 Med (Robespierre, Rights of Man, WWI), 5 Hard (Estates-General, Westphalia)' }
               ].map((quiz, idx) => (
                 <div
                   key={idx}

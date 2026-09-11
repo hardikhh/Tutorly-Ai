@@ -297,6 +297,147 @@ Provide an engaging, clear explanation with examples and ask if they have any fo
   }
 
   /**
+   * Raw prompt caller for Gemini Flash
+   */
+  public async callGeminiRaw(prompt: string): Promise<string | null> {
+    const candidateModels = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-flash-latest'];
+    const bodyPayload = JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.3,
+        maxOutputTokens: 2500
+      }
+    });
+
+    for (const model of candidateModels) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(
+          this.apiKey
+        )}`;
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: bodyPayload
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text && text.trim().length > 0) return text.trim();
+        }
+      } catch {
+        // try next
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Raw prompt caller for OpenAI
+   */
+  public async callOpenAIRawWithKey(key: string, prompt: string): Promise<string | null> {
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${key}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.3,
+          max_tokens: 2500
+        })
+      });
+      if (!response.ok) return null;
+      const data = await response.json();
+      return data?.choices?.[0]?.message?.content?.trim() || null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Dynamically generate custom quiz questions for ANY topic using AI (Gemini Flash or OpenAI)
+   */
+  public async generateQuizQuestions(
+    topic: string,
+    count: number = 5
+  ): Promise<any[] | null> {
+    if (!this.hasApiKey()) return null;
+
+    const prompt = `You are an expert exam setter. Generate exactly ${count} educational multiple-choice quiz questions for the topic: "${topic}".
+STRICT REQUIREMENT: Output ONLY a valid JSON array of objects. Do not include any explanations, greetings, or markdown code blocks (no \`\`\`json).
+Each object must have these exact keys:
+- "id": string (e.g. "ai_q_1")
+- "prompt": question text (clear, accurate, directly about "${topic}")
+- "options": an array of exactly 4 strings
+- "correctIndex": integer (0, 1, 2, or 3) indicating the correct answer in options
+- "explanation": step-by-step rationale of why that option is correct
+- "difficulty": one of "Low", "Medium", or "Hard"
+
+Output format:
+[
+  {
+    "id": "ai_q_1",
+    "prompt": "Question text here?",
+    "options": ["Option A", "Option B", "Option C", "Option D"],
+    "correctIndex": 0,
+    "explanation": "Explanation here",
+    "difficulty": "Low"
+  }
+]`;
+
+    try {
+      let rawText: string | null = null;
+      if (this.getProvider() === 'gemini') {
+        rawText = await this.callGeminiRaw(prompt);
+        if (!rawText) {
+          const envOpenAI = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_OPENAI_API_KEY;
+          if (envOpenAI) rawText = await this.callOpenAIRawWithKey(envOpenAI, prompt);
+        }
+      } else {
+        rawText = await this.callOpenAIRawWithKey(this.apiKey, prompt);
+        if (!rawText) {
+          rawText = await this.callGeminiRaw(prompt);
+        }
+      }
+
+      if (!rawText) return null;
+
+      const cleaned = rawText
+        .replace(/```json/gi, '')
+        .replace(/```/g, '')
+        .trim();
+
+      const parsed = JSON.parse(cleaned);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map((item, idx) => ({
+          id: item.id || `ai_q_${idx + 1}`,
+          prompt: String(item.prompt || `Question on ${topic}`),
+          options: Array.isArray(item.options) && item.options.length >= 2
+            ? item.options.slice(0, 4).map(String)
+            : ['Option A', 'Option B', 'Option C', 'Option D'],
+          correctIndex:
+            typeof item.correctIndex === 'number' &&
+            item.correctIndex >= 0 &&
+            item.correctIndex < (item.options?.length || 4)
+              ? item.correctIndex
+              : 0,
+          explanation: String(item.explanation || `Core concept for ${topic}.`),
+          difficulty:
+            item.difficulty === 'Low' || item.difficulty === 'Medium' || item.difficulty === 'Hard'
+              ? item.difficulty
+              : 'Medium'
+        }));
+      }
+    } catch (err) {
+      console.warn('AI Quiz generation failed, will fallback to local pool:', err);
+    }
+    return null;
+  }
+
+  /**
    * Dynamic Conversational Engine for doubts, chatting, and concept explanations
    */
   public generateDynamicResponse(
