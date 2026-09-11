@@ -44,17 +44,15 @@ export function toTrueFalse(questions: QuizQuestion[]): QuizQuestion[] {
     ...q,
     id: `tf_${i}`,
     type: 'truefalse' as const,
-    // Use the correct option text as the statement — answer is always True
-    prompt: `True or False: ${q.options[q.correctIndex]}`,
-    options: ['True', 'False'],
     // Randomly decide if we present the true statement (answer=True) or
     // flip it to a false statement (answer=False) for variety
     ...(() => {
       const showAsTrue = Math.random() > 0.5;
       if (showAsTrue) {
+        // Use the correct option text as the statement — answer is True
         return { prompt: `True or False: ${q.options[q.correctIndex]}`, options: ['True', 'False'], correctIndex: 0 };
       } else {
-        // Pick a wrong option as the statement
+        // Pick a wrong option as the statement — answer is False
         const wrongOptions = q.options.filter((_, idx) => idx !== q.correctIndex);
         const wrongStatement = wrongOptions[Math.floor(Math.random() * wrongOptions.length)] || q.options[q.correctIndex];
         return { prompt: `True or False: ${wrongStatement}`, options: ['True', 'False'], correctIndex: 1 };
