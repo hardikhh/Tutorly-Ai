@@ -39,6 +39,34 @@ export interface ChatItem {
   timestamp: string;
 }
 
+const SESSION_STORAGE_CHAT_KEY = 'tutorly_session_chat_messages_v1';
+const SESSION_STORAGE_SUBJECT_KEY = 'tutorly_session_chat_subject';
+const SESSION_STORAGE_MODE_KEY = 'tutorly_session_chat_mode';
+
+const DEFAULT_GREETING_MESSAGE: ChatItem = {
+  id: 'm1',
+  sender: 'ai',
+  text: `👋 Hey! I'm **Tutorly**, your 24/7 personal learning coach.\n\nAsk me **any doubt** or question you have! I can chat with you freely, explain complex concepts with simple analogies (ELI5), break problems into steps, or quiz your understanding.\n\nWhat doubt can I help you clear up today?`,
+  modeUsed: 'free_chat',
+  subjectUsed: 'General Academic',
+  timestamp: 'Just now'
+};
+
+const loadInitialMessages = (): ChatItem[] => {
+  try {
+    const stored = sessionStorage.getItem(SESSION_STORAGE_CHAT_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch {
+    // fallback
+  }
+  return [DEFAULT_GREETING_MESSAGE];
+};
+
 interface TutorlyChatProps {
   streakDays: number;
   onOpenFlashcards: (topic: string) => void;
@@ -47,6 +75,7 @@ interface TutorlyChatProps {
   dailyMinutes: number;
   hasLiveApiKey?: boolean;
   initialPrompt?: string | null;
+  onTopicDiscussed?: (topic: string) => void;
 }
 
 export const TutorlyChat: React.FC<TutorlyChatProps> = ({
@@ -56,10 +85,29 @@ export const TutorlyChat: React.FC<TutorlyChatProps> = ({
   onOpenSettings,
   dailyMinutes,
   hasLiveApiKey = false,
-  initialPrompt = null
+  initialPrompt = null,
+  onTopicDiscussed
 }) => {
-  const [subject, setSubject] = useState<string>('General Academic');
-  const [studyMode, setStudyMode] = useState<StudyMode>('free_chat');
+  const [subject, setSubject] = useState<string>(() => {
+    try {
+      return sessionStorage.getItem(SESSION_STORAGE_SUBJECT_KEY) || 'General Academic';
+    } catch {
+      return 'General Academic';
+    }
+  });
+
+  const [studyMode, setStudyMode] = useState<StudyMode>(() => {
+    try {
+      const stored = sessionStorage.getItem(SESSION_STORAGE_MODE_KEY);
+      if (stored && ['free_chat', 'socratic', 'eli5', 'step_by_step', 'standard'].includes(stored)) {
+        return stored as StudyMode;
+      }
+    } catch {
+      // fallback
+    }
+    return 'free_chat';
+  });
+
   const [inputText, setInputText] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isListening, setIsListening] = useState<boolean>(false);
@@ -96,16 +144,30 @@ export const TutorlyChat: React.FC<TutorlyChatProps> = ({
     { text: 'Why is binary search O(log n)?', subj: 'Coding & CS' }
   ];
 
-  const [messages, setMessages] = useState<ChatItem[]>([
-    {
-      id: 'm1',
-      sender: 'ai',
-      text: `👋 Hey! I'm **Tutorly**, your 24/7 personal learning coach.\n\nAsk me **any doubt** or question you have! I can chat with you freely, explain complex concepts with simple analogies (ELI5), break problems into steps, or quiz your understanding.\n\nWhat doubt can I help you clear up today?`,
-      modeUsed: 'free_chat',
-      subjectUsed: 'General Academic',
-      timestamp: 'Just now'
+  const [messages, setMessages] = useState<ChatItem[]>(() => loadInitialMessages());
+
+  // Automatically save messages to sessionStorage whenever updated
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(SESSION_STORAGE_CHAT_KEY, JSON.stringify(messages));
+    } catch (e) {
+      console.warn('Could not save messages to sessionStorage:', e);
     }
-  ]);
+  }, [messages]);
+
+  // Persist subject
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(SESSION_STORAGE_SUBJECT_KEY, subject);
+    } catch {}
+  }, [subject]);
+
+  // Persist study mode
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(SESSION_STORAGE_MODE_KEY, studyMode);
+    } catch {}
+  }, [studyMode]);
 
   // Study timer countdown tick effect
   useEffect(() => {

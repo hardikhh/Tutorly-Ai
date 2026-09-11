@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { evaluatorAgent } from '../services/ai/evaluatorAgent';
 import { WorkAnalysisResult } from '../services/ai/types';
 import { KatexRenderer } from './KatexRenderer';
@@ -20,11 +20,35 @@ interface StudentWorkAnalyzerProps {
 export const StudentWorkAnalyzer: React.FC<StudentWorkAnalyzerProps> = ({
   onStartRemedialLesson
 }) => {
-  const [problemStatement, setProblemStatement] = useState<string>('Solve 2(x + 3) = 14 for x');
-  const [studentStepsInput, setStudentStepsInput] = useState<string>(
-    `2x + 3 = 14\n2x = 11\nx = 5.5`
-  );
+  const [problemStatement, setProblemStatement] = useState<string>(() => {
+    try {
+      return sessionStorage.getItem('tutorly_session_work_problem') || 'Solve 2(x + 3) = 14 for x';
+    } catch {
+      return 'Solve 2(x + 3) = 14 for x';
+    }
+  });
+
+  const [studentStepsInput, setStudentStepsInput] = useState<string>(() => {
+    try {
+      return sessionStorage.getItem('tutorly_session_work_steps') || `2x + 3 = 14\n2x = 11\nx = 5.5`;
+    } catch {
+      return `2x + 3 = 14\n2x = 11\nx = 5.5`;
+    }
+  });
+
   const [analysisResult, setAnalysisResult] = useState<WorkAnalysisResult | null>(null);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('tutorly_session_work_problem', problemStatement);
+    } catch {}
+  }, [problemStatement]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('tutorly_session_work_steps', studentStepsInput);
+    } catch {}
+  }, [studentStepsInput]);
 
   const handleRunAnalysis = () => {
     const rawLines = studentStepsInput
