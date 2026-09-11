@@ -21,6 +21,7 @@ import { generateTopicQuiz, QuizQuestion } from '../services/topicGenerator';
 import { generateQuizPDF } from '../services/pdfService';
 import { speechService } from '../services/speechService';
 import { aiClient } from '../services/aiClient';
+import { sessionAnalytics } from '../services/sessionAnalytics';
 
 interface QuizModalProps {
   isOpen: boolean;
@@ -49,6 +50,14 @@ export const QuizModal: React.FC<QuizModalProps> = ({
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState<boolean>(false);
   const [isAiGenerated, setIsAiGenerated] = useState<boolean>(false);
+  const [mistakes, setMistakes] = useState<{
+    question: string;
+    chosen: string;
+    correct: string;
+    explanation: string;
+    category: string;
+  }[]>([]);
+  const recordedSessionRef = useRef<boolean>(false);
 
   // Timer States (Default: 60 seconds per question)
   const [isTimerActive, setIsTimerActive] = useState<boolean>(true);
@@ -103,6 +112,8 @@ export const QuizModal: React.FC<QuizModalProps> = ({
       setIsTimerPaused(false);
       wasHiddenRef.current = false;
       setIsAiGenerated(false);
+      setMistakes([]);
+      recordedSessionRef.current = false;
 
       // If an active AI API key is configured, dynamically generate tailored questions for this exact topic
       if (aiClient.hasApiKey()) {
@@ -130,6 +141,22 @@ export const QuizModal: React.FC<QuizModalProps> = ({
     }
   }, [topic, isOpen, questionCount]);
 
+  const finishQuizSession = (finalScore: number, finalMistakes: any[]) => {
+    if (recordedSessionRef.current) return;
+    recordedSessionRef.current = true;
+    sessionAnalytics.recordQuizAttempt({
+      topic,
+      totalQuestions: questions.length,
+      score: finalScore,
+      timeSpentSec: Math.max(1, totalTimerSeconds - secondsRemaining),
+      tabSwitchStrikes: strikesRef.current,
+      mistakes: finalMistakes
+    });
+    if (onQuizCompletedRef.current) {
+      onQuizCompletedRef.current(finalScore);
+    }
+  };
+
   // Tab switch violation trigger
   const recordViolation = () => {
     if (!isOpenRef.current || isCompletedRef.current || isDownloadingRef.current) return;
@@ -150,9 +177,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
       speechService.speak(
         `Violation limit reached. Tab switching detected ${newStrikes} times. Quiz automatically submitted.`
       );
-      if (onQuizCompletedRef.current) {
-        onQuizCompletedRef.current(scoreRef.current);
-      }
+      finishQuizSession(scoreRef.current, mistakes);
     } else {
       speechService.speak(
         `Warning! Tab switch detected. Strike ${newStrikes} of ${MAX_STRIKES}. Please remain on the quiz screen.`
@@ -222,6 +247,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
             setIsCompleted(true);
             speechService.speak("Time's up! Here is your quiz score and full review.");
             confetti({ particleCount: 60, spread: 70 });
+            finishQuizSession(scoreRef.current, mistakes);
             return 0;
           }
           return prev - 1;
@@ -232,7 +258,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isOpen, isTimerActive, isTimerPaused, isCompleted, secondsRemaining]);
+  }, [isOpen, isTimerActive, isTimerPaused, isCompleted, secondsRemaining, mistakes]);
 
   if (!isOpen) return null;
 
@@ -260,6 +286,20 @@ export const QuizModal: React.FC<QuizModalProps> = ({
     const isCorrect = selectedIndex === currentQ.correctIndex;
     if (isCorrect) {
       setScore(prev => prev + 1);
+    } else {
+      const mistakeItem = {
+        question: currentQ.prompt,
+        chosen: currentQ.options[selectedIndex] || `Option ${String.fromCharCode(65 + selectedIndex)}`,
+        correct: currentQ.options[currentQ.correctIndex] || 'Correct Option',
+        explanation: currentQ.explanation,
+        category:
+          currentQ.difficulty === 'Hard'
+            ? 'Higher-Order Application'
+            : currentQ.prompt.toLowerCase().includes('what') || currentQ.prompt.toLowerCase().includes('which')
+            ? 'Concept Definition'
+            : 'Calculation or Logic Step'
+      };
+      setMistakes(prev => [...prev, mistakeItem]);
     }
   };
 
@@ -273,7 +313,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
       if (score >= Math.floor(questions.length * 0.6)) {
         confetti({ particleCount: 80, spread: 70 });
       }
-      if (onQuizCompleted) onQuizCompleted(score);
+      finishQuizSession(score, mistakes);
     }
   };
 
@@ -288,6 +328,8 @@ export const QuizModal: React.FC<QuizModalProps> = ({
     setTotalTimerSeconds(totalSecs);
     setSecondsRemaining(totalSecs);
     setIsTimerPaused(false);
+    setMistakes([]);
+    recordedSessionRef.current = false;
   };
 
   const handleCountChange = (count: number) => {

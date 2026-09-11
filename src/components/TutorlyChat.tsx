@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { aiClient, StudyMode } from '../services/aiClient';
 import { speechService } from '../services/speechService';
+import { sessionAnalytics } from '../services/sessionAnalytics';
 import { KatexRenderer } from './KatexRenderer';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { StudyTimerModal, CongratulationModal } from './StudyTimerModal';
@@ -181,6 +182,7 @@ export const TutorlyChat: React.FC<TutorlyChatProps> = ({
       setIsTimerRunning(false);
       setTimerSecondsRemaining(null);
       setIsCongratModalOpen(true);
+      sessionAnalytics.recordFocusTime(timerTotalMinutes);
       confetti({ particleCount: 100, spread: 80, origin: { y: 0.5 } });
       speechService.speak("Congratulations! You completed your study session with outstanding focus!");
     }
@@ -188,7 +190,7 @@ export const TutorlyChat: React.FC<TutorlyChatProps> = ({
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isTimerRunning, timerSecondsRemaining]);
+  }, [isTimerRunning, timerSecondsRemaining, timerTotalMinutes]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -228,6 +230,12 @@ export const TutorlyChat: React.FC<TutorlyChatProps> = ({
     setInputText('');
     setSelectedImageName(null);
     setIsLoading(true);
+
+    // Record session statistics
+    sessionAnalytics.recordDoubt(subject);
+    if (onTopicDiscussed) {
+      onTopicDiscussed(subject);
+    }
 
     try {
       const history = messages.map(m => ({ sender: m.sender, text: m.text }));
