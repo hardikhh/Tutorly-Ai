@@ -76,7 +76,6 @@ interface TutorlyChatProps {
   dailyMinutes: number;
   hasLiveApiKey?: boolean;
   initialPrompt?: string | null;
-  onTopicDiscussed?: (topic: string) => void;
 }
 
 export const TutorlyChat: React.FC<TutorlyChatProps> = ({
@@ -86,8 +85,7 @@ export const TutorlyChat: React.FC<TutorlyChatProps> = ({
   onOpenSettings,
   dailyMinutes,
   hasLiveApiKey = false,
-  initialPrompt = null,
-  onTopicDiscussed
+  initialPrompt = null
 }) => {
   const [subject, setSubject] = useState<string>(() => {
     try {
@@ -231,11 +229,8 @@ export const TutorlyChat: React.FC<TutorlyChatProps> = ({
     setSelectedImageName(null);
     setIsLoading(true);
 
-    // Record session statistics
+    // Record session statistics (for analytics view only, sidebar is untouched)
     sessionAnalytics.recordDoubt(subject);
-    if (onTopicDiscussed) {
-      onTopicDiscussed(subject);
-    }
 
     try {
       const history = messages.map(m => ({ sender: m.sender, text: m.text }));

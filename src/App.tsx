@@ -15,24 +15,8 @@ import { Download, Zap, Sparkles } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import './styles/globals.css';
 
-const SESSION_RECENT_TOPICS_KEY = 'tutorly_session_recent_topics';
-const DEFAULT_RECENT_TOPICS = [
-  'Quadratic Equations & Roots',
-  'Photosynthesis & Respiration',
-  'French Revolution Causes',
-  'Binary Search in Python'
-];
-
-const loadSessionRecentTopics = (): string[] => {
-  try {
-    const stored = sessionStorage.getItem(SESSION_RECENT_TOPICS_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch {}
-  return DEFAULT_RECENT_TOPICS;
-};
+import confetti from 'canvas-confetti';
+import './styles/globals.css';
 
 export function App() {
   const [activeView, setActiveView] = useState<MainView>(() => {
@@ -55,7 +39,6 @@ export function App() {
 
   const [profile, setProfile] = useState<StudentProfile>(() => learnerService.getProfile());
   const [hasLiveApiKey, setHasLiveApiKey] = useState<boolean>(() => openAIClient.hasApiKey());
-  const [recentTopics, setRecentTopics] = useState<string[]>(() => loadSessionRecentTopics());
 
   // Modals
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
@@ -96,18 +79,6 @@ export function App() {
     setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
   };
 
-  const handleTopicDiscussed = (newTopic: string) => {
-    if (!newTopic || newTopic === 'General Academic') return;
-    setRecentTopics(prev => {
-      const filtered = prev.filter(t => t.toLowerCase() !== newTopic.toLowerCase());
-      const updated = [newTopic, ...filtered].slice(0, 8);
-      try {
-        sessionStorage.setItem(SESSION_RECENT_TOPICS_KEY, JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
-  };
-
   const handleNewChat = () => {
     try {
       sessionStorage.removeItem('tutorly_session_chat_messages_v1');
@@ -133,9 +104,6 @@ export function App() {
       learnerService.saveProfile(updated);
       return updated;
     });
-    if (quizTopic) {
-      handleTopicDiscussed(quizTopic);
-    }
   };
 
   return (
@@ -150,7 +118,6 @@ export function App() {
         theme={theme}
         onToggleTheme={handleToggleTheme}
         onSelectRecentTopic={handleSelectRecentTopic}
-        recentTopics={recentTopics}
       />
 
       {/* Main Content Area with Dynamic Background Shift on API Key Connect */}
@@ -163,7 +130,7 @@ export function App() {
           height: '100vh',
           overflowY: 'auto',
           background: 'var(--bg-primary)',
-          transition: 'background 0.8s cubic-bezier(0.4, 0, 0.2, 1)'
+          position: 'relative'
         }}
       >
         {/* Persistent Chat View - Preserved in DOM so switching tabs never loses your chat or input */}
@@ -182,15 +149,12 @@ export function App() {
             hasLiveApiKey={hasLiveApiKey}
             initialPrompt={chatInitialPrompt}
             onOpenFlashcards={topic => {
-              handleTopicDiscussed(topic);
               setFlashcardTopic(topic);
             }}
             onOpenQuiz={topic => {
-              handleTopicDiscussed(topic);
               setQuizTopic(topic);
             }}
             onOpenSettings={() => setIsSettingsOpen(true)}
-            onTopicDiscussed={handleTopicDiscussed}
           />
         </div>
 

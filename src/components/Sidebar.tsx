@@ -25,7 +25,6 @@ interface SidebarProps {
   theme: 'dark' | 'light';
   onToggleTheme: () => void;
   onSelectRecentTopic?: (topic: string) => void;
-  recentTopics?: string[];
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -36,8 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenSettings,
   theme,
   onToggleTheme,
-  onSelectRecentTopic,
-  recentTopics
+  onSelectRecentTopic
 }) => {
   const navItems: { id: MainView; label: string; icon: React.ReactNode }[] = [
     { id: 'chat', label: 'AI Study Chat', icon: <MessageSquare size={18} /> },
@@ -47,15 +45,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'analytics', label: 'Progress & Stats', icon: <BarChart3 size={18} /> }
   ];
 
-  const displayedTopics =
-    recentTopics && recentTopics.length > 0
-      ? recentTopics
-      : [
-          'Quadratic Equations & Roots',
-          'Photosynthesis & Respiration',
-          'French Revolution Causes',
-          'Binary Search in Python'
-        ];
+  const recentTopics = [
+    'Quadratic Equations & Roots',
+    'Photosynthesis & Respiration',
+    'French Revolution Causes',
+    'Binary Search in Python'
+  ];
 
   return (
     <aside
@@ -192,7 +187,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           RECENT TOPICS
         </div>
         <div className="flex flex-col gap-1">
-          {displayedTopics.map((topic, i) => (
+          {recentTopics.map((topic, i) => (
             <button
               key={i}
               onClick={() => {
