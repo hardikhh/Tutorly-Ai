@@ -25,6 +25,7 @@ interface SidebarProps {
   theme: 'dark' | 'light';
   onToggleTheme: () => void;
   onSelectRecentTopic?: (topic: string) => void;
+  recentTopics?: string[];
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -35,7 +36,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenSettings,
   theme,
   onToggleTheme,
-  onSelectRecentTopic
+  onSelectRecentTopic,
+  recentTopics = []
 }) => {
   const navItems: { id: MainView; label: string; icon: React.ReactNode }[] = [
     { id: 'chat', label: 'AI Study Chat', icon: <MessageSquare size={18} /> },
@@ -43,13 +45,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'quiz', label: 'Mastery Quizzes', icon: <Target size={18} /> },
     { id: 'work_checker', label: 'Step Work Checker', icon: <FileCheck2 size={18} /> },
     { id: 'analytics', label: 'Progress & Stats', icon: <BarChart3 size={18} /> }
-  ];
-
-  const recentTopics = [
-    'Quadratic Equations & Roots',
-    'Photosynthesis & Respiration',
-    'French Revolution Causes',
-    'Binary Search in Python'
   ];
 
   return (
@@ -187,31 +182,45 @@ export const Sidebar: React.FC<SidebarProps> = ({
           RECENT TOPICS
         </div>
         <div className="flex flex-col gap-1">
-          {recentTopics.map((topic, i) => (
-            <button
-              key={i}
-              onClick={() => {
-                if (onSelectRecentTopic) {
-                  onSelectRecentTopic(topic);
-                } else {
-                  onSelectView('chat');
-                }
-              }}
-              className="btn-ghost"
+          {recentTopics.length === 0 ? (
+            <div
               style={{
-                fontSize: '0.78rem',
-                justifyContent: 'flex-start',
-                padding: '7px 10px',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                textAlign: 'left'
+                fontSize: '0.75rem',
+                color: 'var(--text-muted)',
+                padding: '10px 10px',
+                fontStyle: 'italic',
+                opacity: 0.6
               }}
             >
-              <span style={{ marginRight: '6px' }}>💬</span>
-              {topic}
-            </button>
-          ))}
+              No recent topics yet.
+            </div>
+          ) : (
+            recentTopics.map((topic, i) => (
+              <button
+                key={i}
+                onClick={() => {
+                  if (onSelectRecentTopic) {
+                    onSelectRecentTopic(topic);
+                  } else {
+                    onSelectView('chat');
+                  }
+                }}
+                className="btn-ghost"
+                style={{
+                  fontSize: '0.78rem',
+                  justifyContent: 'flex-start',
+                  padding: '7px 10px',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  textAlign: 'left'
+                }}
+              >
+                <span style={{ marginRight: '6px' }}>💬</span>
+                {topic}
+              </button>
+            ))
+          )}
         </div>
       </div>
 

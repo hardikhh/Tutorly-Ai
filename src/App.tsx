@@ -15,9 +15,6 @@ import { Download, Zap, Sparkles } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import './styles/globals.css';
 
-import confetti from 'canvas-confetti';
-import './styles/globals.css';
-
 export function App() {
   const [activeView, setActiveView] = useState<MainView>(() => {
     try {
@@ -39,6 +36,8 @@ export function App() {
 
   const [profile, setProfile] = useState<StudentProfile>(() => learnerService.getProfile());
   const [hasLiveApiKey, setHasLiveApiKey] = useState<boolean>(() => openAIClient.hasApiKey());
+  // Starts empty — only fills with topics the user actually searches in this session
+  const [recentTopics, setRecentTopics] = useState<string[]>([]);
 
   // Modals
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
@@ -77,6 +76,15 @@ export function App() {
 
   const handleToggleTheme = () => {
     setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
+  // Only called when user actually sends a real message — adds to sidebar recent list
+  const handleTopicDiscussed = (newTopic: string) => {
+    if (!newTopic || newTopic === 'General Academic') return;
+    setRecentTopics(prev => {
+      const filtered = prev.filter(t => t.toLowerCase() !== newTopic.toLowerCase());
+      return [newTopic, ...filtered].slice(0, 8);
+    });
   };
 
   const handleNewChat = () => {
@@ -118,6 +126,7 @@ export function App() {
         theme={theme}
         onToggleTheme={handleToggleTheme}
         onSelectRecentTopic={handleSelectRecentTopic}
+        recentTopics={recentTopics}
       />
 
       {/* Main Content Area with Dynamic Background Shift on API Key Connect */}
@@ -155,6 +164,7 @@ export function App() {
               setQuizTopic(topic);
             }}
             onOpenSettings={() => setIsSettingsOpen(true)}
+            onTopicDiscussed={handleTopicDiscussed}
           />
         </div>
 
