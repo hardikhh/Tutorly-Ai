@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Target,
   CheckCircle2,
@@ -11,7 +11,10 @@ import {
   Zap,
   Clock,
   Pause,
-  Play
+  Play,
+  ShieldAlert,
+  ShieldCheck,
+  AlertTriangle
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { generateTopicQuiz, QuizQuestion } from '../services/topicGenerator';
@@ -25,6 +28,8 @@ interface QuizModalProps {
   initialCount?: number;
   onQuizCompleted?: (score: number) => void;
 }
+
+const MAX_STRIKES = 3;
 
 export const QuizModal: React.FC<QuizModalProps> = ({
   isOpen,
@@ -48,7 +53,31 @@ export const QuizModal: React.FC<QuizModalProps> = ({
   const [totalTimerSeconds, setTotalTimerSeconds] = useState<number>(initialCount * 60);
   const [secondsRemaining, setSecondsRemaining] = useState<number>(initialCount * 60);
 
-  // Reset quiz state and timer on topic, count, or open change
+  // Anti-Cheat & Tab Switch Lock States
+  const [strikes, setStrikes] = useState<number>(0);
+  const [showViolationModal, setShowViolationModal] = useState<boolean>(false);
+  const [isDisqualified, setIsDisqualified] = useState<boolean>(false);
+
+  // Sync refs to prevent stale closure bugs in browser event listeners
+  const isOpenRef = useRef(isOpen);
+  const isCompletedRef = useRef(isCompleted);
+  const isDownloadingRef = useRef(isDownloading);
+  const strikesRef = useRef(strikes);
+  const scoreRef = useRef(score);
+  const onQuizCompletedRef = useRef(onQuizCompleted);
+  const wasHiddenRef = useRef(false);
+  const lastViolationTimeRef = useRef<number>(0);
+
+  useEffect(() => {
+    isOpenRef.current = isOpen;
+    isCompletedRef.current = isCompleted;
+    isDownloadingRef.current = isDownloading;
+    strikesRef.current = strikes;
+    scoreRef.current = score;
+    onQuizCompletedRef.current = onQuizCompleted;
+  });
+
+  // Reset quiz state, strikes, and timer on topic, count, or open change
   useEffect(() => {
     if (isOpen) {
       const qs = generateTopicQuiz(topic, questionCount, true);
@@ -59,11 +88,95 @@ export const QuizModal: React.FC<QuizModalProps> = ({
       setHasSubmitted(false);
       setScore(0);
       setIsCompleted(false);
+      setStrikes(0);
+      setShowViolationModal(false);
+      setIsDisqualified(false);
       setTotalTimerSeconds(totalSecs);
       setSecondsRemaining(totalSecs);
       setIsTimerPaused(false);
+      wasHiddenRef.current = false;
     }
   }, [topic, isOpen, questionCount]);
+
+  // Tab switch violation trigger
+  const recordViolation = () => {
+    if (!isOpenRef.current || isCompletedRef.current || isDownloadingRef.current) return;
+
+    const now = Date.now();
+    // Debounce to prevent multiple triggers from consecutive blur and visibilitychange
+    if (now - lastViolationTimeRef.current < 1500) return;
+    lastViolationTimeRef.current = now;
+
+    const currentStrikes = strikesRef.current;
+    const newStrikes = currentStrikes + 1;
+    setStrikes(newStrikes);
+    setShowViolationModal(true);
+
+    if (newStrikes >= MAX_STRIKES) {
+      setIsDisqualified(true);
+      setIsCompleted(true);
+      speechService.speak(
+        `Violation limit reached. Tab switching detected ${newStrikes} times. Quiz automatically submitted.`
+      );
+      if (onQuizCompletedRef.current) {
+        onQuizCompletedRef.current(scoreRef.current);
+      }
+    } else {
+      speechService.speak(
+        `Warning! Tab switch detected. Strike ${newStrikes} of ${MAX_STRIKES}. Please remain on the quiz screen.`
+      );
+    }
+  };
+
+  // Tab Switch & Visibility Change Detection
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        if (!isCompletedRef.current && !isDownloadingRef.current) {
+          wasHiddenRef.current = true;
+        }
+      } else {
+        if (wasHiddenRef.current && !isCompletedRef.current && !isDownloadingRef.current) {
+          wasHiddenRef.current = false;
+          recordViolation();
+        }
+      }
+    };
+
+    const handleWindowBlur = () => {
+      if (!isCompletedRef.current && !isDownloadingRef.current) {
+        wasHiddenRef.current = true;
+      }
+    };
+
+    const handleWindowFocus = () => {
+      if (wasHiddenRef.current && !isCompletedRef.current && !isDownloadingRef.current) {
+        wasHiddenRef.current = false;
+        recordViolation();
+      }
+    };
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isOpenRef.current && !isCompletedRef.current) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleWindowBlur);
+    window.addEventListener('focus', handleWindowFocus);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleWindowBlur);
+      window.removeEventListener('focus', handleWindowFocus);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isOpen]);
 
   // Live Timer Countdown Ticking Effect
   useEffect(() => {
@@ -200,7 +313,8 @@ export const QuizModal: React.FC<QuizModalProps> = ({
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6)'
+          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6)',
+          position: 'relative'
         }}
       >
         {/* Header */}
@@ -218,6 +332,28 @@ export const QuizModal: React.FC<QuizModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Tab-Switch Anti-Cheat Badge */}
+            {!isCompleted && (
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '4px 10px',
+                  borderRadius: 'var(--radius-full)',
+                  background: strikes > 0 ? 'rgba(239, 68, 68, 0.18)' : 'rgba(16, 185, 129, 0.12)',
+                  border: `1px solid ${strikes > 0 ? 'rgba(239, 68, 68, 0.4)' : 'rgba(16, 185, 129, 0.3)'}`,
+                  color: strikes > 0 ? 'var(--critical-gap)' : 'var(--mastered)',
+                  fontSize: '0.74rem',
+                  fontWeight: 700
+                }}
+                title={`Tab-switch monitoring is active. Leaving the tab records a strike (${strikes}/${MAX_STRIKES}).`}
+              >
+                {strikes > 0 ? <ShieldAlert size={13} className="animate-pulse" /> : <ShieldCheck size={13} />}
+                <span>Tab Lock: {strikes}/{MAX_STRIKES} Strikes</span>
+              </div>
+            )}
+
             {/* Live Timer Pill */}
             {isTimerActive && !isCompleted && (
               <div
@@ -367,8 +503,109 @@ export const QuizModal: React.FC<QuizModalProps> = ({
           </div>
         </div>
 
+        {/* Tab Switch Violation Overlay Modal */}
+        {showViolationModal && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'rgba(10, 15, 29, 0.96)',
+              backdropFilter: 'blur(12px)',
+              zIndex: 50,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '24px',
+              textAlign: 'center'
+            }}
+          >
+            <div
+              style={{
+                maxWidth: '440px',
+                background: strikes >= MAX_STRIKES ? 'rgba(239, 68, 68, 0.16)' : 'rgba(245, 158, 11, 0.14)',
+                border: `1px solid ${strikes >= MAX_STRIKES ? 'rgba(239, 68, 68, 0.5)' : 'rgba(245, 158, 11, 0.4)'}`,
+                borderRadius: 'var(--radius-lg)',
+                padding: '28px 24px',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.6)'
+              }}
+            >
+              <div
+                style={{
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '50%',
+                  background: strikes >= MAX_STRIKES ? 'rgba(239, 68, 68, 0.25)' : 'rgba(245, 158, 11, 0.2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 16px'
+                }}
+              >
+                {strikes >= MAX_STRIKES ? (
+                  <ShieldAlert size={36} color="var(--critical-gap)" />
+                ) : (
+                  <AlertTriangle size={36} color="var(--developing)" />
+                )}
+              </div>
+
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', marginBottom: '8px' }}>
+                {strikes >= MAX_STRIKES ? 'Quiz Auto-Submitted!' : '⚠️ Tab Switch Detected!'}
+              </h3>
+
+              <div
+                style={{
+                  display: 'inline-block',
+                  padding: '4px 12px',
+                  borderRadius: 'var(--radius-full)',
+                  background: strikes >= MAX_STRIKES ? 'rgba(239, 68, 68, 0.25)' : 'rgba(245, 158, 11, 0.25)',
+                  color: strikes >= MAX_STRIKES ? '#fca5a5' : '#fde68a',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  marginBottom: '14px'
+                }}
+              >
+                Strike {Math.min(strikes, MAX_STRIKES)} of {MAX_STRIKES}
+              </div>
+
+              <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '22px' }}>
+                {strikes >= MAX_STRIKES
+                  ? 'You have exceeded the maximum allowed tab switches (3/3). For academic integrity, your quiz has been locked and automatically submitted.'
+                  : `Switching tabs, minimizing the browser, or leaving this assessment window is strictly prohibited. You received strike ${strikes} of ${MAX_STRIKES}. Reaching ${MAX_STRIKES} strikes will automatically end and submit your quiz.`}
+              </p>
+
+              {strikes >= MAX_STRIKES ? (
+                <button
+                  onClick={() => setShowViolationModal(false)}
+                  className="btn-primary"
+                  style={{ width: '100%', justifyContent: 'center', padding: '12px' }}
+                >
+                  View Final Score & Review
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowViolationModal(false)}
+                  className="btn-primary"
+                  style={{
+                    width: '100%',
+                    justifyContent: 'center',
+                    padding: '12px',
+                    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                    borderColor: '#ef4444'
+                  }}
+                >
+                  I Understand, Return to Quiz
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Content */}
-        <div style={{ padding: '24px' }}>
+        <div
+          style={{ padding: '24px', userSelect: 'none' }}
+          onCopy={(e) => e.preventDefault()}
+          onContextMenu={(e) => e.preventDefault()}
+        >
           {!isCompleted && currentQ ? (
             <div>
               <div className="flex justify-between items-center" style={{ marginBottom: '12px' }}>
@@ -550,11 +787,71 @@ export const QuizModal: React.FC<QuizModalProps> = ({
               </div>
 
               <h2 style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
-                {secondsRemaining === 0 && isTimerActive ? "Time's Up!" : "Mastery Check Completed!"}
+                {isDisqualified
+                  ? 'Quiz Auto-Submitted!'
+                  : secondsRemaining === 0 && isTimerActive
+                  ? "Time's Up!"
+                  : "Mastery Check Completed!"}
               </h2>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', marginBottom: '14px' }}>
                 You scored <strong>{score} out of {questions.length}</strong> ({Math.round((score / questions.length) * 100)}%) on {topic}.
               </p>
+
+              {/* Proctor Integrity Status Banner */}
+              <div style={{ marginBottom: '16px' }}>
+                {isDisqualified ? (
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '6px 14px',
+                      borderRadius: 'var(--radius-full)',
+                      background: 'rgba(239, 68, 68, 0.15)',
+                      border: '1px solid rgba(239, 68, 68, 0.4)',
+                      color: 'var(--critical-gap)',
+                      fontSize: '0.82rem',
+                      fontWeight: 700
+                    }}
+                  >
+                    <ShieldAlert size={15} /> Quiz Auto-Submitted: {strikes} Tab Switch Violations Recorded
+                  </div>
+                ) : strikes === 0 ? (
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '5px 12px',
+                      borderRadius: 'var(--radius-full)',
+                      background: 'rgba(16, 185, 129, 0.12)',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                      color: 'var(--mastered)',
+                      fontSize: '0.8rem',
+                      fontWeight: 600
+                    }}
+                  >
+                    <ShieldCheck size={14} /> Proctor Integrity: 100% Clean (Zero Tab Switches)
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '5px 12px',
+                      borderRadius: 'var(--radius-full)',
+                      background: 'rgba(245, 158, 11, 0.12)',
+                      border: '1px solid rgba(245, 158, 11, 0.3)',
+                      color: 'var(--developing)',
+                      fontSize: '0.8rem',
+                      fontWeight: 600
+                    }}
+                  >
+                    <ShieldAlert size={14} /> Integrity Note: {strikes} Tab Switch {strikes === 1 ? 'Warning' : 'Warnings'} Logged
+                  </div>
+                )}
+              </div>
 
               {/* Stats pill: Time Spent */}
               <div

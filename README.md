@@ -1,5 +1,9 @@
 # 🎓 Tutorly — Smart AI Learning Coach & Universal Doubt Solver
 
+🌐 **Live Demo:** [https://tutorly-ai-eight.vercel.app/](https://tutorly-ai-eight.vercel.app/)
+
+> ⚠️ **Note:** Due to free-tier cloud deployment and shared API quotas, initial responses and AI replies may experience slight latency / slower response times. Thank you for your patience!
+
 > **Empowering UN SDG 4 (Quality Education) with personalized, accessible, 24/7 AI-powered learning.**
 
 Tutorly is an advanced, student-first learning companion built to make doubt clearing, concept mastery, and exam preparation engaging, intuitive, and effective.
