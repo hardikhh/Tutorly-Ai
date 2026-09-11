@@ -19,7 +19,7 @@ export const DEFAULT_STUDENT_PROFILE: StudentProfile = {
   examDate: '2026-10-15',
   dailyTimeMinutes: 30,
   preferredLearningStyle: 'socratic',
-  learningStreakDays: 5,
+  learningStreakDays: 0,
   totalQuestionsSolved: 28,
   totalStudyMinutes: 145,
   completedLessons: ['math_negative_numbers'],
@@ -130,6 +130,38 @@ export const DEFAULT_STUDENT_PROFILE: StudentProfile = {
   ]
 };
 
+const STREAK_KEY = 'tutorly_streak_v1';
+
+/**
+ * Computes the real daily streak:
+ * - First visit ever → streak = 1
+ * - Visited yesterday → streak + 1
+ * - Visited today already → keep current streak
+ * - Missed one or more days → reset to 1
+ */
+function computeAndSaveStreak(currentStreak: number): number {
+  const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+  try {
+    const raw = localStorage.getItem(STREAK_KEY);
+    if (raw) {
+      const { lastVisit, streak } = JSON.parse(raw) as { lastVisit: string; streak: number };
+      if (lastVisit === today) {
+        // Already recorded today – keep streak unchanged
+        return streak;
+      }
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      const newStreak = lastVisit === yesterday ? streak + 1 : 1;
+      localStorage.setItem(STREAK_KEY, JSON.stringify({ lastVisit: today, streak: newStreak }));
+      return newStreak;
+    }
+  } catch {}
+  // First-time visit or parse error – start at 1
+  try {
+    localStorage.setItem(STREAK_KEY, JSON.stringify({ lastVisit: today, streak: 1 }));
+  } catch {}
+  return 1;
+}
+
 export class LearnerModelService {
   private profile: StudentProfile;
 
@@ -144,13 +176,19 @@ export class LearnerModelService {
   private loadProfile(): StudentProfile {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        return JSON.parse(stored);
+      const base: StudentProfile = stored ? JSON.parse(stored) : { ...DEFAULT_STUDENT_PROFILE };
+      // Always compute real streak on load (updates if it's a new day)
+      const realStreak = computeAndSaveStreak(base.learningStreakDays);
+      if (base.learningStreakDays !== realStreak) {
+        base.learningStreakDays = realStreak;
+        // Persist the updated streak immediately
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(base)); } catch {}
       }
+      return base;
     } catch {
       // fallback
     }
-    return DEFAULT_STUDENT_PROFILE;
+    return { ...DEFAULT_STUDENT_PROFILE, learningStreakDays: computeAndSaveStreak(0) };
   }
 
   public saveProfile(newProfile: StudentProfile): void {
