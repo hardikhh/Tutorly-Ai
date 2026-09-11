@@ -5,6 +5,62 @@ export interface QuizQuestion {
   correctIndex: number;
   explanation: string;
   difficulty?: 'Low' | 'Medium' | 'Hard';
+  type?: 'mcq' | 'truefalse';
+}
+
+/** Shuffle an array in-place using Fisher-Yates */
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/**
+ * Shuffle the options of each question and update correctIndex so the right
+ * answer is never predictably in the same slot.
+ */
+export function shuffleOptions(questions: QuizQuestion[]): QuizQuestion[] {
+  return questions.map(q => {
+    const correctAnswer = q.options[q.correctIndex];
+    const shuffled = shuffle(q.options);
+    return {
+      ...q,
+      options: shuffled,
+      correctIndex: shuffled.indexOf(correctAnswer)
+    };
+  });
+}
+
+/**
+ * Convert MCQ questions into True / False format:
+ * Each question becomes "True or False: <correct statement>"
+ * with ["True", "False"] options.
+ */
+export function toTrueFalse(questions: QuizQuestion[]): QuizQuestion[] {
+  return questions.map((q, i) => ({
+    ...q,
+    id: `tf_${i}`,
+    type: 'truefalse' as const,
+    // Use the correct option text as the statement — answer is always True
+    prompt: `True or False: ${q.options[q.correctIndex]}`,
+    options: ['True', 'False'],
+    // Randomly decide if we present the true statement (answer=True) or
+    // flip it to a false statement (answer=False) for variety
+    ...(() => {
+      const showAsTrue = Math.random() > 0.5;
+      if (showAsTrue) {
+        return { prompt: `True or False: ${q.options[q.correctIndex]}`, options: ['True', 'False'], correctIndex: 0 };
+      } else {
+        // Pick a wrong option as the statement
+        const wrongOptions = q.options.filter((_, idx) => idx !== q.correctIndex);
+        const wrongStatement = wrongOptions[Math.floor(Math.random() * wrongOptions.length)] || q.options[q.correctIndex];
+        return { prompt: `True or False: ${wrongStatement}`, options: ['True', 'False'], correctIndex: 1 };
+      }
+    })()
+  }));
 }
 
 export interface Flashcard {
@@ -1335,7 +1391,7 @@ export function generateTopicQuiz(
     const low = pool.filter(q => q.difficulty === 'Low').slice(0, 5);
     const med = pool.filter(q => q.difficulty === 'Medium').slice(0, 5);
     const hard = pool.filter(q => q.difficulty === 'Hard').slice(0, 5);
-    return [...low, ...med, ...hard];
+    return shuffleOptions([...low, ...med, ...hard]);
   }
 
   // 5 Questions: 2 Low, 2 Med, 1 Hard
@@ -1343,7 +1399,7 @@ export function generateTopicQuiz(
     const low = pool.filter(q => q.difficulty === 'Low').slice(0, 2);
     const med = pool.filter(q => q.difficulty === 'Medium').slice(0, 2);
     const hard = pool.filter(q => q.difficulty === 'Hard').slice(0, 1);
-    return [...low, ...med, ...hard];
+    return shuffleOptions([...low, ...med, ...hard]);
   }
 
   // 10 Questions: 4 Low, 4 Med, 2 Hard
@@ -1351,10 +1407,10 @@ export function generateTopicQuiz(
     const low = pool.filter(q => q.difficulty === 'Low').slice(0, 4);
     const med = pool.filter(q => q.difficulty === 'Medium').slice(0, 4);
     const hard = pool.filter(q => q.difficulty === 'Hard').slice(0, 2);
-    return [...low, ...med, ...hard];
+    return shuffleOptions([...low, ...med, ...hard]);
   }
 
-  return pool.slice(0, questionCount);
+  return shuffleOptions(pool.slice(0, questionCount));
 }
 
 export function generateTopicFlashcards(topic: string): Flashcard[] {

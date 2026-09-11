@@ -17,7 +17,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { generateTopicQuiz, QuizQuestion } from '../services/topicGenerator';
+import { generateTopicQuiz, QuizQuestion, shuffleOptions, toTrueFalse } from '../services/topicGenerator';
 import { generateQuizPDF } from '../services/pdfService';
 import { speechService } from '../services/speechService';
 import { aiClient } from '../services/aiClient';
@@ -57,7 +57,18 @@ export const QuizModal: React.FC<QuizModalProps> = ({
     explanation: string;
     category: string;
   }[]>([]);
+  const [quizType, setQuizType] = useState<'mcq' | 'truefalse' | 'mixed'>('mcq');
   const recordedSessionRef = useRef<boolean>(false);
+
+  /** Apply quiz type transformation to a set of base MCQ questions */
+  const applyQuizType = (qs: QuizQuestion[], type: 'mcq' | 'truefalse' | 'mixed'): QuizQuestion[] => {
+    if (type === 'truefalse') return toTrueFalse(qs);
+    if (type === 'mixed') {
+      const half = Math.ceil(qs.length / 2);
+      return [...shuffleOptions(qs.slice(0, half)), ...toTrueFalse(qs.slice(half))];
+    }
+    return qs; // already shuffled by generateTopicQuiz
+  };
 
   // Timer States (Default: 60 seconds per question)
   const [isTimerActive, setIsTimerActive] = useState<boolean>(true);
@@ -96,7 +107,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
   // Reset quiz state, strikes, and timer on topic, count, or open change
   useEffect(() => {
     if (isOpen) {
-      const qs = generateTopicQuiz(topic, questionCount, true);
+      const qs = applyQuizType(generateTopicQuiz(topic, questionCount, true), quizType);
       const totalSecs = questionCount * 60;
       setQuestions(qs);
       setCurrentIndex(0);
@@ -335,7 +346,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
   const handleCountChange = (count: number) => {
     const totalSecs = count * 60;
     setQuestionCount(count);
-    setQuestions(generateTopicQuiz(topic, count, true));
+    setQuestions(applyQuizType(generateTopicQuiz(topic, count, true), quizType));
     setCurrentIndex(0);
     setSelectedIndex(null);
     setHasSubmitted(false);
@@ -344,6 +355,16 @@ export const QuizModal: React.FC<QuizModalProps> = ({
     setTotalTimerSeconds(totalSecs);
     setSecondsRemaining(totalSecs);
     setIsTimerPaused(false);
+  };
+
+  const handleTypeChange = (type: 'mcq' | 'truefalse' | 'mixed') => {
+    setQuizType(type);
+    setQuestions(applyQuizType(generateTopicQuiz(topic, questionCount, true), type));
+    setCurrentIndex(0);
+    setSelectedIndex(null);
+    setHasSubmitted(false);
+    setScore(0);
+    setIsCompleted(false);
   };
 
   const handleDownloadPDF = () => {
@@ -549,79 +570,115 @@ export const QuizModal: React.FC<QuizModalProps> = ({
           </div>
         </div>
 
-        {/* Question Count & Tier Selection Bar */}
+        {/* Quiz Configuration Bar: Type + Count */}
         <div
           style={{
             padding: '10px 20px',
-            background: 'rgba(255, 255, 255, 0.03)',
+            background: 'var(--bg-tertiary)',
             borderBottom: '1px solid var(--border-subtle)',
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
+            flexDirection: 'column',
             gap: '8px'
           }}
         >
-          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-            Question Count & Tiers:
-          </span>
+          {/* Row 1: Question Type */}
+          <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.73rem', color: 'var(--text-muted)', fontWeight: 700, minWidth: 80 }}>
+              TYPE:
+            </span>
+            {([
+              { key: 'mcq', label: '📝 MCQ', title: 'Multiple Choice Questions (4 options)' },
+              { key: 'truefalse', label: '✅ True / False', title: 'True or False questions' },
+              { key: 'mixed', label: '🔀 Mixed', title: 'Mix of MCQ and True/False' }
+            ] as { key: 'mcq' | 'truefalse' | 'mixed'; label: string; title: string }[]).map(opt => (
+              <button
+                key={opt.key}
+                onClick={() => handleTypeChange(opt.key)}
+                title={opt.title}
+                style={{
+                  padding: '4px 11px',
+                  borderRadius: 'var(--radius-full)',
+                  fontSize: '0.74rem',
+                  fontWeight: quizType === opt.key ? 700 : 500,
+                  background: quizType === opt.key ? 'var(--primary)' : 'var(--bg-secondary)',
+                  color: quizType === opt.key ? '#ffffff' : 'var(--text-secondary)',
+                  border: '1px solid ' + (quizType === opt.key ? 'var(--primary-light)' : 'var(--border-medium)'),
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => handleCountChange(5)}
-              style={{
-                padding: '4px 10px',
-                borderRadius: 'var(--radius-full)',
-                fontSize: '0.75rem',
-                fontWeight: questionCount === 5 ? 700 : 500,
-                background: questionCount === 5 ? 'var(--primary)' : 'rgba(255, 255, 255, 0.05)',
-                color: questionCount === 5 ? '#ffffff' : 'var(--text-secondary)',
-                border: '1px solid ' + (questionCount === 5 ? 'var(--primary-light)' : 'var(--border-subtle)'),
-                cursor: 'pointer'
-              }}
-            >
-              5 Qs (5m)
-            </button>
+          {/* Row 2: Question Count presets + custom input */}
+          <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.73rem', color: 'var(--text-muted)', fontWeight: 700, minWidth: 80 }}>
+              COUNT:
+            </span>
+            {[5, 10, 15].map(n => (
+              <button
+                key={n}
+                onClick={() => handleCountChange(n)}
+                style={{
+                  padding: '4px 11px',
+                  borderRadius: 'var(--radius-full)',
+                  fontSize: '0.74rem',
+                  fontWeight: questionCount === n ? 700 : 500,
+                  background: questionCount === n
+                    ? n === 15
+                      ? 'linear-gradient(135deg, #6366f1 0%, #06b6d4 100%)'
+                      : 'var(--primary)'
+                    : 'var(--bg-secondary)',
+                  color: questionCount === n ? '#ffffff' : 'var(--text-secondary)',
+                  border: '1px solid ' + (questionCount === n
+                    ? n === 15 ? '#818cf8' : 'var(--primary-light)'
+                    : 'var(--border-medium)'),
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+                title={n === 15 ? '1-Step Tiered: 5 Low + 5 Med + 5 Hard' : undefined}
+              >
+                {n === 15 && <Zap size={12} />} {n} Qs
+              </button>
+            ))}
 
-            <button
-              onClick={() => handleCountChange(10)}
-              style={{
-                padding: '4px 10px',
-                borderRadius: 'var(--radius-full)',
-                fontSize: '0.75rem',
-                fontWeight: questionCount === 10 ? 700 : 500,
-                background: questionCount === 10 ? 'var(--primary)' : 'rgba(255, 255, 255, 0.05)',
-                color: questionCount === 10 ? '#ffffff' : 'var(--text-secondary)',
-                border: '1px solid ' + (questionCount === 10 ? 'var(--primary-light)' : 'var(--border-subtle)'),
-                cursor: 'pointer'
-              }}
-            >
-              10 Qs (10m)
-            </button>
-
-            {/* 1-Step 15-Question Tiered Challenge */}
-            <button
-              onClick={() => handleCountChange(15)}
-              style={{
-                padding: '4px 12px',
-                borderRadius: 'var(--radius-full)',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                background:
-                  questionCount === 15
-                    ? 'linear-gradient(135deg, #6366f1 0%, #06b6d4 100%)'
-                    : 'rgba(99, 102, 241, 0.15)',
-                color: '#ffffff',
-                border: '1px solid ' + (questionCount === 15 ? '#818cf8' : 'rgba(99, 102, 241, 0.3)'),
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                cursor: 'pointer'
-              }}
-              title="1-Step Tiered Quiz: 5 Low Level + 5 Medium Level + 5 Hard Level (15m Timer)"
-            >
-              <Zap size={13} /> 15 Qs (5 Low + 5 Med + 5 Hard)
-            </button>
+            {/* Custom count input */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <input
+                type="number"
+                min={1}
+                max={30}
+                defaultValue={questionCount}
+                onBlur={e => {
+                  const val = Math.min(30, Math.max(1, parseInt(e.target.value) || 5));
+                  e.target.value = String(val);
+                  handleCountChange(val);
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    const val = Math.min(30, Math.max(1, parseInt((e.target as HTMLInputElement).value) || 5));
+                    handleCountChange(val);
+                  }
+                }}
+                style={{
+                  width: '56px',
+                  padding: '4px 8px',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-medium)',
+                  background: 'var(--bg-input)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.78rem',
+                  textAlign: 'center'
+                }}
+                title="Custom number of questions (1–30)"
+              />
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>custom</span>
+            </div>
           </div>
         </div>
 
